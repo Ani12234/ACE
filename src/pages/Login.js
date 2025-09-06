@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuth } from '../context/AuthContext';
+import DomainSelection from '../components/DomainSelection';
+import CourseRecommendations from '../components/CourseRecommendations';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,6 +13,9 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDomainSelection, setShowDomainSelection] = useState(false);
+  const [showCourseRecommendations, setShowCourseRecommendations] = useState(false);
+  const [selectedDomainData, setSelectedDomainData] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -55,9 +60,39 @@ function Login() {
       };
       
       login(userData);
-      navigate('/dashboard');
+      
+      // Check if user has already selected a domain
+      const existingDomainSelection = localStorage.getItem('userDomainSelection');
+      
+      if (existingDomainSelection) {
+        // User has already selected domain, go directly to dashboard
+        navigate('/dashboard');
+      } else {
+        // New user, show domain selection popup
+        setShowDomainSelection(true);
+      }
+      
       setIsLoading(false);
     }, 1000);
+  };
+
+  const handleDomainSelect = (domainData) => {
+    // Save domain selection to localStorage
+    localStorage.setItem('userDomainSelection', JSON.stringify(domainData));
+    setSelectedDomainData(domainData);
+    setShowDomainSelection(false);
+    setShowCourseRecommendations(true);
+  };
+
+  const handleCourseSelect = (course) => {
+    // Save selected course and redirect to dashboard
+    localStorage.setItem('selectedCourse', JSON.stringify(course));
+    navigate('/dashboard');
+  };
+
+  const handleSkipCourseSelection = () => {
+    // Skip course selection and go to dashboard
+    navigate('/dashboard');
   };
 
   return (
@@ -167,6 +202,35 @@ function Login() {
           </div>
         </div>
       </section>
+
+      {/* Domain Selection Popup */}
+      <DomainSelection
+        isOpen={showDomainSelection}
+        onClose={() => setShowDomainSelection(false)}
+        onDomainSelect={handleDomainSelect}
+      />
+
+      {/* Course Recommendations Popup */}
+      {showCourseRecommendations && selectedDomainData && (
+        <div className="course-recommendations-overlay">
+          <div className="course-recommendations-modal">
+            <div className="modal-header">
+              <h2>Perfect! Here are your recommended courses</h2>
+              <button 
+                className="skip-btn"
+                onClick={handleSkipCourseSelection}
+              >
+                Skip for now
+              </button>
+            </div>
+            <CourseRecommendations
+              selectedDomain={selectedDomainData.domain}
+              experienceLevel={selectedDomainData.experience}
+              onCourseSelect={handleCourseSelect}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

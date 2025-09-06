@@ -11,7 +11,9 @@ import MainHomePage from './pages/MainHomePage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Footer from './components/Footer';
-
+import DomainSelection from './components/DomainSelection';
+import CourseRecommendations from './components/CourseRecommendations';
+import CourseDetail from './components/CourseDetail';
 function AppContent() {
   const { isAuthenticated, user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,6 +56,7 @@ function AppContent() {
                 <Link to="/features" className="nav-link" onClick={closeMobileMenu}>Features</Link>
                 <Link to="/interview-practice" className="nav-link" onClick={closeMobileMenu}>AI Interview</Link>
                 <Link to="/dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
+                <Link to="/courses" className="nav-link" onClick={closeMobileMenu}>Courses</Link>
                 <button onClick={handleLogout} className="nav-link logout-btn">
                   Logout
                 </button>

@@ -10,210 +10,321 @@ function MainHomePage() {
   const dashboardRef = useRef(null);
 
   useEffect(() => {
-    // Wait for DOM to be fully rendered
-    const timer = setTimeout(() => {
-      if (!dashboardRef.current) return;
+    let animationTimeout;
+    let activeAnimations = [];
 
-      // Check if elements exist before animating
-      const headerElement = dashboardRef.current.querySelector('.dashboard-header');
-      const cardElements = dashboardRef.current.querySelectorAll('.dashboard-card');
-      const floatingIcons = dashboardRef.current.querySelectorAll('.floating-icon');
+    const initializeAnimations = () => {
+      try {
+        // Clear any existing animations first
+        gsap.killTweensOf("*");
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill());
 
-      if (headerElement) {
-        // Modern staggered animation for dashboard cards
-        const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-        
-        // Animate header with typewriter effect
-        const titleElement = headerElement.querySelector('.dashboard-title');
-        const subtitleElement = headerElement.querySelector('.dashboard-subtitle');
-        
-        if (titleElement) {
-          // Split text into characters for typewriter effect
-          const titleText = titleElement.textContent;
-          titleElement.innerHTML = titleText.split('').map(char => 
-            char === ' ' ? '<span class="char">&nbsp;</span>' : `<span class="char">${char}</span>`
-          ).join('');
-          
-          const titleChars = titleElement.querySelectorAll('.char');
-          
-          tl.fromTo(headerElement, 
-            { y: -30, opacity: 0 }, 
-            { y: 0, opacity: 1, duration: 0.8 }
-          )
-          .fromTo(titleChars, 
-            { opacity: 0, y: 20 }, 
-            { opacity: 1, y: 0, duration: 0.03, stagger: 0.03 }, 
-            '-=0.4'
-          );
-        }
+        if (!dashboardRef.current) return;
 
-        if (subtitleElement) {
-          // Word-by-word reveal for subtitle
-          const subtitleText = subtitleElement.textContent;
-          subtitleElement.innerHTML = subtitleText.split(' ').map(word => 
-            `<span class="word">${word}</span>`
-          ).join(' ');
-          
-          const subtitleWords = subtitleElement.querySelectorAll('.word');
-          
-          tl.fromTo(subtitleWords, 
-            { opacity: 0, y: 15, rotateX: -90 }, 
-            { opacity: 1, y: 0, rotateX: 0, duration: 0.4, stagger: 0.1 }, 
-            '-=0.2'
-          );
-        }
+        // Wait for DOM to be fully rendered with longer delay
+        animationTimeout = setTimeout(() => {
+          if (!dashboardRef.current) return;
 
-        // Animate cards with enhanced effects
-        if (cardElements.length > 0) {
-          tl.fromTo(cardElements, 
-            { y: 50, opacity: 0, scale: 0.9, rotateY: -15 }, 
-            { y: 0, opacity: 1, scale: 1, rotateY: 0, duration: 0.6, stagger: 0.1 }, 
-            '-=0.4'
-          );
+          // Robust element selection with existence checks
+          const safeQuerySelector = (selector) => {
+            try {
+              const elements = dashboardRef.current.querySelectorAll(selector);
+              return Array.from(elements).filter(el => el && el.parentNode);
+            } catch (error) {
+              console.warn(`Element selection failed for: ${selector}`, error);
+              return [];
+            }
+          };
 
-          // Animate text within cards
-          cardElements.forEach((card, index) => {
-            const cardTitle = card.querySelector('.card-title, .stat-value, .path-title');
-            const cardText = card.querySelector('.card-subtitle, .stat-label, .path-description');
+          const headerElement = dashboardRef.current.querySelector('.dashboard-header');
+          const cardElements = safeQuerySelector('.dashboard-card');
+          const floatingIcons = safeQuerySelector('.floating-icon');
+
+          if (headerElement && headerElement.parentNode) {
+            try {
+              // Create main timeline with error handling
+              const tl = gsap.timeline({ 
+                defaults: { ease: 'power3.out' },
+                onComplete: () => console.log('Main animation timeline completed'),
+                onError: (error) => console.warn('Timeline error:', error)
+              });
+              
+              // Animate header with typewriter effect
+              const titleElement = headerElement.querySelector('.dashboard-title');
+              const subtitleElement = headerElement.querySelector('.dashboard-subtitle');
+              
+              if (titleElement && titleElement.parentNode) {
+                try {
+                  const titleText = titleElement.textContent || titleElement.innerText || '';
+                  if (titleText) {
+                    titleElement.innerHTML = titleText.split('').map(char => 
+                      char === ' ' ? '<span class="char">&nbsp;</span>' : `<span class="char">${char}</span>`
+                    ).join('');
+                    
+                    const titleChars = safeQuerySelector('.dashboard-title .char');
+                    
+                    if (titleChars.length > 0) {
+                      tl.fromTo(headerElement, 
+                        { y: -30, opacity: 0 }, 
+                        { y: 0, opacity: 1, duration: 0.8 }
+                      )
+                      .fromTo(titleChars, 
+                        { opacity: 0, y: 20 }, 
+                        { opacity: 1, y: 0, duration: 0.03, stagger: 0.03 }, 
+                        '-=0.4'
+                      );
+                    }
+                  }
+                } catch (error) {
+                  console.warn('Title animation error:', error);
+                }
+              }
+
+              if (subtitleElement && subtitleElement.parentNode) {
+                try {
+                  const subtitleText = subtitleElement.textContent || subtitleElement.innerText || '';
+                  if (subtitleText) {
+                    subtitleElement.innerHTML = subtitleText.split(' ').map(word => 
+                      `<span class="word">${word}</span>`
+                    ).join(' ');
+                    
+                    const subtitleWords = safeQuerySelector('.dashboard-subtitle .word');
+                    
+                    if (subtitleWords.length > 0) {
+                      tl.fromTo(subtitleWords, 
+                        { opacity: 0, y: 15, rotateX: -90 }, 
+                        { opacity: 1, y: 0, rotateX: 0, duration: 0.4, stagger: 0.1 }, 
+                        '-=0.2'
+                      );
+                    }
+                  }
+                } catch (error) {
+                  console.warn('Subtitle animation error:', error);
+                }
+              }
+
+              // Animate cards with enhanced effects
+              if (cardElements.length > 0) {
+                try {
+                  tl.fromTo(cardElements, 
+                    { y: 50, opacity: 0, scale: 0.9, rotateY: -15 }, 
+                    { y: 0, opacity: 1, scale: 1, rotateY: 0, duration: 0.6, stagger: 0.1 }, 
+                    '-=0.4'
+                  );
+
+                  // Animate text within cards safely
+                  cardElements.forEach((card, index) => {
+                    if (!card || !card.parentNode) return;
+                    
+                    try {
+                      const cardTitle = card.querySelector('.card-title, .stat-value, .path-title');
+                      const cardText = card.querySelector('.card-subtitle, .stat-label, .path-description');
+                      
+                      if (cardTitle && cardTitle.parentNode) {
+                        const titleAnimation = gsap.fromTo(cardTitle, 
+                          { opacity: 0, x: -20 }, 
+                          { opacity: 1, x: 0, duration: 0.5, delay: 0.2 + (index * 0.1) }
+                        );
+                        activeAnimations.push(titleAnimation);
+                      }
+                      
+                      if (cardText && cardText.parentNode) {
+                        const textAnimation = gsap.fromTo(cardText, 
+                          { opacity: 0, x: 20 }, 
+                          { opacity: 1, x: 0, duration: 0.5, delay: 0.3 + (index * 0.1) }
+                        );
+                        activeAnimations.push(textAnimation);
+                      }
+                    } catch (error) {
+                      console.warn(`Card animation error for card ${index}:`, error);
+                    }
+                  });
+                } catch (error) {
+                  console.warn('Card elements animation error:', error);
+                }
+              }
+
+              activeAnimations.push(tl);
+            } catch (error) {
+              console.warn('Header animation error:', error);
+            }
+          }
+
+          // Animate other elements safely
+          try {
+            const motivationTitle = dashboardRef.current?.querySelector('.motivation-title');
+            const motivationMessage = dashboardRef.current?.querySelector('.motivation-message');
             
-            if (cardTitle) {
-              gsap.fromTo(cardTitle, 
-                { opacity: 0, x: -20 }, 
-                { opacity: 1, x: 0, duration: 0.5, delay: 0.2 + (index * 0.1) }
+            if (motivationTitle && motivationTitle.parentNode) {
+              const motivationText = motivationTitle.textContent || motivationTitle.innerText || '';
+              if (motivationText) {
+                motivationTitle.innerHTML = motivationText.split(' ').map(word => 
+                  `<span class="motivation-word">${word}</span>`
+                ).join(' ');
+                
+                const motivationWords = safeQuerySelector('.motivation-title .motivation-word');
+                
+                if (motivationWords.length > 0) {
+                  const motivationAnimation = gsap.fromTo(motivationWords, 
+                    { opacity: 0, scale: 0.8, y: 20 }, 
+                    { 
+                      opacity: 1, 
+                      scale: 1, 
+                      y: 0, 
+                      duration: 0.6, 
+                      stagger: 0.15,
+                      ease: 'back.out(1.7)',
+                      delay: 1.5
+                    }
+                  );
+                  activeAnimations.push(motivationAnimation);
+                }
+              }
+            }
+
+            if (motivationMessage && motivationMessage.parentNode) {
+              const messageAnimation = gsap.fromTo(motivationMessage, 
+                { opacity: 0, y: 30 }, 
+                { opacity: 1, y: 0, duration: 0.8, delay: 2 }
               );
+              activeAnimations.push(messageAnimation);
             }
-            
-            if (cardText) {
-              gsap.fromTo(cardText, 
-                { opacity: 0, x: 20 }, 
-                { opacity: 1, x: 0, duration: 0.5, delay: 0.3 + (index * 0.1) }
+          } catch (error) {
+            console.warn('Motivation section animation error:', error);
+          }
+
+          // Enhanced floating animation for icons
+          if (floatingIcons.length > 0) {
+            try {
+              const floatingAnimation1 = gsap.to(floatingIcons, {
+                y: -10,
+                duration: 2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'power2.inOut',
+                stagger: 0.3
+              });
+
+              const floatingAnimation2 = gsap.to(floatingIcons, {
+                rotation: 360,
+                duration: 20,
+                repeat: -1,
+                ease: 'none',
+                stagger: 2
+              });
+
+              activeAnimations.push(floatingAnimation1, floatingAnimation2);
+            } catch (error) {
+              console.warn('Floating icons animation error:', error);
+            }
+          }
+
+          // Animate other elements with error handling
+          try {
+            const progressBars = safeQuerySelector('.progress-fill');
+            progressBars.forEach((bar, index) => {
+              if (!bar || !bar.parentNode) return;
+              
+              try {
+                const width = bar.style.width || '0%';
+                bar.style.width = '0%';
+                
+                const progressAnimation = gsap.to(bar, {
+                  width: width,
+                  duration: 1.5,
+                  delay: 1 + (index * 0.2),
+                  ease: 'power2.out'
+                });
+                activeAnimations.push(progressAnimation);
+              } catch (error) {
+                console.warn(`Progress bar animation error for bar ${index}:`, error);
+              }
+            });
+
+            const taskItems = safeQuerySelector('.task-item');
+            if (taskItems.length > 0) {
+              const taskAnimation = gsap.fromTo(taskItems, 
+                { opacity: 0, x: -30, rotateY: -15 }, 
+                { 
+                  opacity: 1, 
+                  x: 0, 
+                  rotateY: 0, 
+                  duration: 0.6, 
+                  stagger: 0.1, 
+                  delay: 1.2,
+                  ease: 'back.out(1.2)'
+                }
               );
+              activeAnimations.push(taskAnimation);
             }
-          });
-        }
 
-        // Animate motivation section with special text effects
-        const motivationTitle = dashboardRef.current.querySelector('.motivation-title');
-        const motivationMessage = dashboardRef.current.querySelector('.motivation-message');
-        
-        if (motivationTitle) {
-          const motivationText = motivationTitle.textContent;
-          motivationTitle.innerHTML = motivationText.split(' ').map(word => 
-            `<span class="motivation-word">${word}</span>`
-          ).join(' ');
-          
-          const motivationWords = motivationTitle.querySelectorAll('.motivation-word');
-          
-          gsap.fromTo(motivationWords, 
-            { opacity: 0, scale: 0.8, y: 20 }, 
-            { 
-              opacity: 1, 
-              scale: 1, 
-              y: 0, 
-              duration: 0.6, 
-              stagger: 0.15,
-              ease: 'back.out(1.7)',
-              delay: 1.5
+            const achievementItems = safeQuerySelector('.achievement-item');
+            if (achievementItems.length > 0) {
+              const achievementAnimation = gsap.fromTo(achievementItems, 
+                { opacity: 0, scale: 0, rotation: -180 }, 
+                { 
+                  opacity: 1, 
+                  scale: 1, 
+                  rotation: 0, 
+                  duration: 0.8, 
+                  stagger: 0.15, 
+                  delay: 1.5,
+                  ease: 'back.out(2)'
+                }
+              );
+              activeAnimations.push(achievementAnimation);
             }
-          );
-        }
 
-        if (motivationMessage) {
-          gsap.fromTo(motivationMessage, 
-            { opacity: 0, y: 30 }, 
-            { opacity: 1, y: 0, duration: 0.8, delay: 2 }
-          );
-        }
-
-        // Animate learning path progress bars
-        const progressBars = dashboardRef.current.querySelectorAll('.progress-fill');
-        progressBars.forEach((bar, index) => {
-          const width = bar.style.width;
-          bar.style.width = '0%';
-          
-          gsap.to(bar, {
-            width: width,
-            duration: 1.5,
-            delay: 1 + (index * 0.2),
-            ease: 'power2.out'
-          });
-        });
-
-        // Animate task items with staggered reveal
-        const taskItems = dashboardRef.current.querySelectorAll('.task-item');
-        if (taskItems.length > 0) {
-          gsap.fromTo(taskItems, 
-            { opacity: 0, x: -30, rotateY: -15 }, 
-            { 
-              opacity: 1, 
-              x: 0, 
-              rotateY: 0, 
-              duration: 0.6, 
-              stagger: 0.1, 
-              delay: 1.2,
-              ease: 'back.out(1.2)'
+            const actionButtons = safeQuerySelector('.btn');
+            if (actionButtons.length > 0) {
+              const buttonAnimation = gsap.to(actionButtons, {
+                scale: 1.05,
+                duration: 2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'power2.inOut',
+                stagger: 0.5
+              });
+              activeAnimations.push(buttonAnimation);
             }
-          );
-        }
+          } catch (error) {
+            console.warn('Additional animations error:', error);
+          }
 
-        // Animate achievement badges
-        const achievementItems = dashboardRef.current.querySelectorAll('.achievement-item');
-        if (achievementItems.length > 0) {
-          gsap.fromTo(achievementItems, 
-            { opacity: 0, scale: 0, rotation: -180 }, 
-            { 
-              opacity: 1, 
-              scale: 1, 
-              rotation: 0, 
-              duration: 0.8, 
-              stagger: 0.15, 
-              delay: 1.5,
-              ease: 'back.out(2)'
-            }
-          );
-        }
+        }, 200); // Increased delay for better reliability
+
+      } catch (error) {
+        console.error('Animation initialization error:', error);
       }
+    };
 
-      // Enhanced floating animation for icons
-      if (floatingIcons.length > 0) {
-        gsap.to(floatingIcons, {
-          y: -10,
-          duration: 2,
-          repeat: -1,
-          yoyo: true,
-          ease: 'power2.inOut',
-          stagger: 0.3
-        });
-
-        // Add rotation animation to some icons
-        gsap.to(floatingIcons, {
-          rotation: 360,
-          duration: 20,
-          repeat: -1,
-          ease: 'none',
-          stagger: 2
-        });
-      }
-
-      // Add pulsing animation to action buttons
-      const actionButtons = dashboardRef.current.querySelectorAll('.btn');
-      if (actionButtons.length > 0) {
-        gsap.to(actionButtons, {
-          scale: 1.05,
-          duration: 2,
-          repeat: -1,
-          yoyo: true,
-          ease: 'power2.inOut',
-          stagger: 0.5
-        });
-      }
-
-    }, 100); // Small delay to ensure DOM is ready
+    initializeAnimations();
 
     return () => {
-      clearTimeout(timer);
-      // Clean up ScrollTrigger instances
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      try {
+        if (animationTimeout) {
+          clearTimeout(animationTimeout);
+        }
+        
+        // Kill all active animations
+        activeAnimations.forEach(animation => {
+          if (animation && typeof animation.kill === 'function') {
+            animation.kill();
+          }
+        });
+        
+        // Clean up all GSAP animations
+        gsap.killTweensOf("*");
+        
+        // Clean up ScrollTrigger instances
+        ScrollTrigger.getAll().forEach(trigger => {
+          if (trigger && typeof trigger.kill === 'function') {
+            trigger.kill();
+          }
+        });
+      } catch (error) {
+        console.warn('Animation cleanup error:', error);
+      }
     };
   }, []);
 
