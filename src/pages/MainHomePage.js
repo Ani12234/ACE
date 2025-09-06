@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 function MainHomePage() {
   const [user] = useState({ name: 'John Doe', level: 'Intermediate', streak: 7 });
   const [progress] = useState({ completed: 65, total: 100 });
   const dashboardRef = useRef(null);
   const cardsRef = useRef([]);
+  const canvasRef = useRef(null);
 
   const addToCardsRef = (el) => {
     if (el && !cardsRef.current.includes(el)) {
@@ -35,6 +39,93 @@ function MainHomePage() {
       { y: 0, opacity: 1, duration: 0.7, stagger: 0.1 },
       '-=0.3'
     );
+
+    // Interactive Canvas Animations
+    const canvas = canvasRef.current;
+    if (canvas) {
+      // Floating elements animation
+      gsap.to('.canvas-float-1', {
+        y: -20,
+        rotation: 5,
+        duration: 3,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power2.inOut'
+      });
+
+      gsap.to('.canvas-float-2', {
+        y: -15,
+        rotation: -3,
+        duration: 2.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power2.inOut',
+        delay: 0.5
+      });
+
+      gsap.to('.canvas-float-3', {
+        y: -25,
+        rotation: 8,
+        duration: 3.5,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power2.inOut',
+        delay: 1
+      });
+
+      // Scroll-triggered animations for canvas
+      ScrollTrigger.create({
+        trigger: canvas,
+        start: 'top 80%',
+        end: 'bottom 20%',
+        onEnter: () => {
+          gsap.fromTo('.canvas-element', 
+            { scale: 0, opacity: 0, rotation: -180 },
+            { scale: 1, opacity: 1, rotation: 0, duration: 1, stagger: 0.2, ease: 'back.out(1.7)' }
+          );
+        },
+        onLeave: () => {
+          gsap.to('.canvas-element', { scale: 0.8, opacity: 0.5, duration: 0.5 });
+        },
+        onEnterBack: () => {
+          gsap.to('.canvas-element', { scale: 1, opacity: 1, duration: 0.5 });
+        }
+      });
+
+      // Progress bar animation on scroll
+      ScrollTrigger.create({
+        trigger: canvas,
+        start: 'top 70%',
+        onEnter: () => {
+          gsap.fromTo('.canvas-progress-fill',
+            { width: '0%' },
+            { width: '75%', duration: 2, ease: 'power2.out' }
+          );
+        }
+      });
+
+      // Text typing effect
+      ScrollTrigger.create({
+        trigger: canvas,
+        start: 'top 60%',
+        onEnter: () => {
+          const text = "AI-Powered Learning";
+          const textElement = document.querySelector('.canvas-typing-text');
+          if (textElement) {
+            textElement.textContent = '';
+            gsap.to({}, {
+              duration: 2,
+              ease: 'none',
+              onUpdate: function() {
+                const progress = this.progress();
+                const currentLength = Math.floor(progress * text.length);
+                textElement.textContent = text.substring(0, currentLength);
+              }
+            });
+          }
+        }
+      });
+    }
   }, []);
 
   const learningModules = [
@@ -96,6 +187,44 @@ function MainHomePage() {
             <div className="quick-actions">
               <button className="btn btnPrimary">Start Learning</button>
               <button className="btn btnGhost">Take Assessment</button>
+            </div>
+          </div>
+          <div>
+            <div ref={canvasRef} className="heroMock">
+              <div className="canvas-content">
+                <div className="canvas-header">
+                  <div className="canvas-element canvas-float-1">🤖</div>
+                  <div className="canvas-typing-text"></div>
+                  <div className="canvas-element canvas-float-2">📚</div>
+                </div>
+                
+                <div className="canvas-progress-container">
+                  <div className="canvas-progress-bar">
+                    <div className="canvas-progress-fill"></div>
+                  </div>
+                  <span className="canvas-progress-text">Learning Progress</span>
+                </div>
+
+                <div className="canvas-features">
+                  <div className="canvas-element canvas-feature">
+                    <div className="canvas-float-3">⚡</div>
+                    <span>Interactive</span>
+                  </div>
+                  <div className="canvas-element canvas-feature">
+                    <div className="canvas-float-1">🎯</div>
+                    <span>Personalized</span>
+                  </div>
+                  <div className="canvas-element canvas-feature">
+                    <div className="canvas-float-2">🚀</div>
+                    <span>Adaptive</span>
+                  </div>
+                </div>
+
+                <div className="canvas-footer">
+                  <div className="canvas-element canvas-pulse"></div>
+                  <span className="canvas-subtitle">GSAP Scroll Animations</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

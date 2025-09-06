@@ -8,6 +8,8 @@ gsap.registerPlugin(ScrollTrigger);
 function Home() {
   const heroRef = useRef(null);
   const sectionsRef = useRef([]);
+  const heroMockRef = useRef(null);
+  const cardsRef = useRef([]);
   sectionsRef.current = [];
 
   const addToSectionsRef = (el) => {
@@ -16,35 +18,328 @@ function Home() {
     }
   };
 
+  const addToCardsRef = (el) => {
+    if (el && !cardsRef.current.includes(el)) {
+      cardsRef.current.push(el);
+    }
+  };
+
   useEffect(() => {
     const hero = heroRef.current;
+    const heroMock = heroMockRef.current;
+    
+    // Check if device is mobile
+    const isMobile = window.innerWidth <= 768;
+    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+    
+    // Reduce motion for users who prefer it
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Intro animation
+    // Intro animation - simplified for mobile
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
     tl.fromTo(
       hero.querySelectorAll('[data-hero-fade]'),
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.9, stagger: 0.12 }
+      { y: isMobile ? 20 : 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: isMobile ? 0.6 : 0.9, stagger: isMobile ? 0.08 : 0.12 }
     );
 
-    // Scroll reveal for sections
-    sectionsRef.current.forEach((section) => {
-      gsap.fromTo(
-        section,
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.8,
-          ease: 'power2.out',
+    // Hero mock animations - reduced for mobile performance
+    if (heroMock && !prefersReducedMotion) {
+      if (!isMobile) {
+        // Full parallax effect for desktop
+        gsap.to(heroMock, {
+          y: -50,
+          scale: 1.05,
           scrollTrigger: {
-            trigger: section,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse'
+            trigger: heroMock,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1,
           }
-        }
-      );
+        });
+
+        // 3D rotation for desktop only
+        gsap.to(heroMock, {
+          rotateY: 5,
+          rotateX: 2,
+          scrollTrigger: {
+            trigger: heroMock,
+            start: 'top 80%',
+            end: 'bottom 20%',
+            scrub: 2,
+          }
+        });
+      } else {
+        // Simplified mobile animation
+        gsap.to(heroMock, {
+          y: -20,
+          scrollTrigger: {
+            trigger: heroMock,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 0.5,
+          }
+        });
+      }
+    }
+
+    // Enhanced scroll reveal for sections - mobile optimized
+    sectionsRef.current.forEach((section, index) => {
+      if (prefersReducedMotion) {
+        // Simple fade for reduced motion
+        gsap.fromTo(
+          section,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.5,
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 90%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+        return;
+      }
+
+      const animationType = isMobile ? 0 : index % 3; // Use only slide up on mobile
+      const duration = isMobile ? 0.6 : 1;
+      const distance = isMobile ? 30 : 60;
+      
+      switch(animationType) {
+        case 0:
+          // Slide up from bottom
+          gsap.fromTo(
+            section,
+            { y: distance, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: duration,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: section,
+                start: isMobile ? 'top 95%' : 'top 85%',
+                end: isMobile ? 'top 70%' : 'top 50%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+          break;
+        case 1:
+          // Slide in from left (desktop only)
+          gsap.fromTo(
+            section,
+            { x: -distance, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: duration,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: section,
+                start: 'top 85%',
+                end: 'top 50%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+          break;
+        case 2:
+          // Scale and fade in (desktop only)
+          gsap.fromTo(
+            section,
+            { scale: 0.9, opacity: 0 },
+            {
+              scale: 1,
+              opacity: 1,
+              duration: duration,
+              ease: 'back.out(1.7)',
+              scrollTrigger: {
+                trigger: section,
+                start: 'top 85%',
+                end: 'top 50%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+          break;
+      }
     });
+
+    // Staggered card animations - mobile optimized
+    cardsRef.current.forEach((card, index) => {
+      if (prefersReducedMotion) {
+        // Simple fade for reduced motion
+        gsap.fromTo(
+          card,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.5,
+            delay: index * 0.1,
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 95%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+      } else {
+        gsap.fromTo(
+          card,
+          { 
+            y: isMobile ? 20 : 40, 
+            opacity: 0, 
+            rotateY: isMobile ? 0 : -15,
+            scale: isMobile ? 1 : 0.9 
+          },
+          {
+            y: 0,
+            opacity: 1,
+            rotateY: 0,
+            scale: 1,
+            duration: isMobile ? 0.5 : 0.8,
+            ease: isMobile ? 'power2.out' : 'back.out(1.7)',
+            delay: index * (isMobile ? 0.1 : 0.2),
+            scrollTrigger: {
+              trigger: card,
+              start: isMobile ? 'top 95%' : 'top 90%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+      }
+
+      // Card hover effect - desktop only
+      if (!isMobile && !prefersReducedMotion) {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, { 
+            y: -10, 
+            scale: 1.05, 
+            duration: 0.3, 
+            ease: 'power2.out' 
+          });
+        });
+
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, { 
+            y: 0, 
+            scale: 1, 
+            duration: 0.3, 
+            ease: 'power2.out' 
+          });
+        });
+      }
+    });
+
+    // Text reveal animation - simplified for mobile
+    if (!prefersReducedMotion) {
+      const headings = document.querySelectorAll('h2, h3');
+      headings.forEach(heading => {
+        if (isMobile) {
+          // Simple fade for mobile
+          gsap.fromTo(heading, 
+            { opacity: 0, y: 20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: heading,
+                start: 'top 90%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+        } else {
+          // Character animation for desktop
+          const text = heading.textContent;
+          heading.innerHTML = '';
+          
+          text.split('').forEach((char, i) => {
+            const span = document.createElement('span');
+            span.textContent = char === ' ' ? '\u00A0' : char;
+            span.style.display = 'inline-block';
+            span.style.opacity = '0';
+            span.style.transform = 'translateY(20px)';
+            heading.appendChild(span);
+          });
+
+          gsap.to(heading.children, {
+            opacity: 1,
+            y: 0,
+            duration: 0.05,
+            stagger: 0.03,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: heading,
+              start: 'top 85%',
+              toggleActions: 'play none none reverse'
+            }
+          });
+        }
+      });
+    }
+
+    // Floating animation for stat card icon - reduced on mobile
+    const statIcon = document.querySelector('.statIcon');
+    if (statIcon && !prefersReducedMotion) {
+      gsap.to(statIcon, {
+        y: isMobile ? -3 : -5,
+        duration: isMobile ? 1.5 : 2,
+        repeat: -1,
+        yoyo: true,
+        ease: 'power2.inOut'
+      });
+    }
+
+    // Progress bar animation - mobile optimized
+    ScrollTrigger.create({
+      trigger: '.statCard',
+      start: isMobile ? 'top 90%' : 'top 80%',
+      onEnter: () => {
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = `
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          height: 3px;
+          background: var(--gradient);
+          border-radius: 0 0 14px 14px;
+          width: 0%;
+        `;
+        
+        const statCard = document.querySelector('.statCard');
+        if (statCard && !statCard.querySelector('div[style*="position: absolute"]')) {
+          statCard.style.position = 'relative';
+          statCard.appendChild(progressBar);
+          
+          gsap.to(progressBar, {
+            width: '100%',
+            duration: isMobile ? 1.5 : 2,
+            ease: 'power2.out'
+          });
+        }
+      }
+    });
+
+    // Handle orientation change on mobile
+    const handleOrientationChange = () => {
+      ScrollTrigger.refresh();
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', ScrollTrigger.refresh);
+
+    // Cleanup function
+    return () => {
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener('resize', ScrollTrigger.refresh);
+    };
   }, []);
 
   return (
@@ -72,7 +367,7 @@ function Home() {
             </div>
           </div>
           <div>
-            <div className="heroMock">Interactive learning canvas • GSAP scroll animations</div>
+            <div ref={heroMockRef} className="heroMock">Interactive learning canvas • GSAP scroll animations</div>
           </div>
         </div>
       </section>
@@ -92,19 +387,19 @@ function Home() {
 
       <section ref={addToSectionsRef} className="section">
         <div className="container grid-3">
-          <div className="card">
+          <div ref={addToCardsRef} className="card">
             <h3>Motivation</h3>
             <p>
               Bridge the gap between self‑learning and job readiness. Learners need structured, reliable content and realistic interview practice to validate their skills.
             </p>
           </div>
-          <div className="card">
+          <div ref={addToCardsRef} className="card">
             <h3>Problem Statement</h3>
             <p>
               Scattered resources and lack of practical evaluation make it hard to measure progress. Our system delivers curated content, simulated interviews, and personalized feedback.
             </p>
           </div>
-          <div className="card">
+          <div ref={addToCardsRef} className="card">
             <h3>What You Get</h3>
             <p>
               AI‑guided study paths, topic recommendations, progress tracking, and interview simulations that assess technical expertise and communication.
@@ -117,5 +412,3 @@ function Home() {
 }
 
 export default Home;
-
-
