@@ -61,66 +61,113 @@ function Login() {
   };
 
   return (
-    <>
-      <div className="authWrap">
-        <form ref={cardRef} className="authCard" onSubmit={handleLogin}>
-          <h2 className="authTitle">Welcome back</h2>
-          <p className="authSubtitle">Log in to continue your AI‑powered learning journey.</p>
+    <div className="login-page">
+      {/* Login Hero Section */}
+      <section className="login-hero section">
+        <div className="container">
+          <div className="login-content">
+            <div className="login-info">
+              <h1 className="login-title">Welcome Back</h1>
+              <p className="login-subtitle">
+                Continue your AI-powered learning journey and unlock your potential with personalized education.
+              </p>
+              <div className="login-features">
+                <div className="login-feature">
+                  <span className="feature-icon">🎯</span>
+                  <span>Personalized Learning Path</span>
+                </div>
+                <div className="login-feature">
+                  <span className="feature-icon">🤖</span>
+                  <span>AI-Powered Interview Practice</span>
+                </div>
+                <div className="login-feature">
+                  <span className="feature-icon">📊</span>
+                  <span>Real-time Progress Tracking</span>
+                </div>
+              </div>
+            </div>
 
-          <div className="field" data-stagger>
-            <label htmlFor="email">Email</label>
-            <input 
-              id="email" 
-              type="email" 
-              className="input" 
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field" data-stagger>
-            <label htmlFor="password">Password</label>
-            <input 
-              id="password" 
-              type="password" 
-              className="input" 
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+            <div className="login-form-container">
+              <form ref={cardRef} className="login-form" onSubmit={handleLogin}>
+                <div className="form-header" data-stagger>
+                  <h2>Sign In</h2>
+                  <p>Access your learning dashboard</p>
+                </div>
 
-          <div className="authActions" data-stagger>
-            <button 
-              className="btn btnPrimary" 
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Logging in...' : 'Login'}
-            </button>
-            <Link to="/signup" className="link">Create an account</Link>
-          </div>
-        </form>
-      </div>
-      <section className="section">
-        <div className="container grid-3">
-          <div className="card" data-feature-item>
-            <h3>Secure Authentication</h3>
-            <p>We keep your data protected with modern standards and best practices.</p>
-          </div>
-          <div className="card" data-feature-item>
-            <h3>Personalized Dashboard</h3>
-            <p>Pick up where you left off and track your learning progress.</p>
-          </div>
-          <div className="card" data-feature-item>
-            <h3>One‑click Practice</h3>
-            <p>Jump into AI‑powered mock interviews tailored to your skills.</p>
+                <div className="form-group" data-stagger>
+                  <label htmlFor="email">Email Address</label>
+                  <input 
+                    id="email" 
+                    type="email" 
+                    className="form-input" 
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" data-stagger>
+                  <label htmlFor="password">Password</label>
+                  <input 
+                    id="password" 
+                    type="password" 
+                    className="form-input" 
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-actions" data-stagger>
+                  <button 
+                    className="btn btnPrimary btn-large" 
+                    type="submit"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                  </button>
+                  
+                  <div className="form-links">
+                    <Link to="/signup" className="auth-link">
+                      Don't have an account? <span>Sign Up</span>
+                    </Link>
+                  </div>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </section>
-    </>
+
+      {/* Benefits Section */}
+      <section className="login-benefits section">
+        <div className="container">
+          <div className="section-header">
+            <h2>Why Choose Our Platform?</h2>
+            <div className="section-line"></div>
+          </div>
+          <div className="benefits-grid">
+            <div className="benefit-card" data-feature-item>
+              <div className="benefit-icon">🔒</div>
+              <h3>Secure & Private</h3>
+              <p>Your data is protected with enterprise-grade security and encryption standards.</p>
+            </div>
+            <div className="benefit-card" data-feature-item>
+              <div className="benefit-icon">📈</div>
+              <h3>Track Progress</h3>
+              <p>Monitor your learning journey with detailed analytics and personalized insights.</p>
+            </div>
+            <div className="benefit-card" data-feature-item>
+              <div className="benefit-icon">🎯</div>
+              <h3>AI-Powered Practice</h3>
+              <p>Experience realistic interview scenarios with our advanced AI proctor system.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

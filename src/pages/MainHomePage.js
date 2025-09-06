@@ -7,383 +7,496 @@ gsap.registerPlugin(ScrollTrigger);
 
 function MainHomePage() {
   const [user] = useState({ name: 'John Doe', level: 'Intermediate', streak: 7 });
-  const [progress] = useState({ completed: 65, total: 100 });
   const dashboardRef = useRef(null);
-  const cardsRef = useRef([]);
-  const canvasRef = useRef(null);
-
-  const addToCardsRef = (el) => {
-    if (el && !cardsRef.current.includes(el)) {
-      cardsRef.current.push(el);
-    }
-  };
 
   useEffect(() => {
-    // Animate dashboard elements on load
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    
-    tl.fromTo(
-      '.welcome-section',
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.8 }
-    )
-    .fromTo(
-      '.stats-grid > *',
-      { y: 20, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.6, stagger: 0.1 },
-      '-=0.4'
-    )
-    .fromTo(
-      cardsRef.current,
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.7, stagger: 0.1 },
-      '-=0.3'
-    );
+    // Wait for DOM to be fully rendered
+    const timer = setTimeout(() => {
+      if (!dashboardRef.current) return;
 
-    // Interactive Canvas Animations
-    const canvas = canvasRef.current;
-    if (canvas) {
-      // Floating elements animation
-      gsap.to('.canvas-float-1', {
-        y: -20,
-        rotation: 5,
-        duration: 3,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power2.inOut'
-      });
+      // Check if elements exist before animating
+      const headerElement = dashboardRef.current.querySelector('.dashboard-header');
+      const cardElements = dashboardRef.current.querySelectorAll('.dashboard-card');
+      const floatingIcons = dashboardRef.current.querySelectorAll('.floating-icon');
 
-      gsap.to('.canvas-float-2', {
-        y: -15,
-        rotation: -3,
-        duration: 2.5,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power2.inOut',
-        delay: 0.5
-      });
-
-      gsap.to('.canvas-float-3', {
-        y: -25,
-        rotation: 8,
-        duration: 3.5,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power2.inOut',
-        delay: 1
-      });
-
-      // Scroll-triggered animations for canvas
-      ScrollTrigger.create({
-        trigger: canvas,
-        start: 'top 80%',
-        end: 'bottom 20%',
-        onEnter: () => {
-          gsap.fromTo('.canvas-element', 
-            { scale: 0, opacity: 0, rotation: -180 },
-            { scale: 1, opacity: 1, rotation: 0, duration: 1, stagger: 0.2, ease: 'back.out(1.7)' }
-          );
-        },
-        onLeave: () => {
-          gsap.to('.canvas-element', { scale: 0.8, opacity: 0.5, duration: 0.5 });
-        },
-        onEnterBack: () => {
-          gsap.to('.canvas-element', { scale: 1, opacity: 1, duration: 0.5 });
-        }
-      });
-
-      // Progress bar animation on scroll
-      ScrollTrigger.create({
-        trigger: canvas,
-        start: 'top 70%',
-        onEnter: () => {
-          gsap.fromTo('.canvas-progress-fill',
-            { width: '0%' },
-            { width: '75%', duration: 2, ease: 'power2.out' }
+      if (headerElement) {
+        // Modern staggered animation for dashboard cards
+        const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+        
+        // Animate header with typewriter effect
+        const titleElement = headerElement.querySelector('.dashboard-title');
+        const subtitleElement = headerElement.querySelector('.dashboard-subtitle');
+        
+        if (titleElement) {
+          // Split text into characters for typewriter effect
+          const titleText = titleElement.textContent;
+          titleElement.innerHTML = titleText.split('').map(char => 
+            char === ' ' ? '<span class="char">&nbsp;</span>' : `<span class="char">${char}</span>`
+          ).join('');
+          
+          const titleChars = titleElement.querySelectorAll('.char');
+          
+          tl.fromTo(headerElement, 
+            { y: -30, opacity: 0 }, 
+            { y: 0, opacity: 1, duration: 0.8 }
+          )
+          .fromTo(titleChars, 
+            { opacity: 0, y: 20 }, 
+            { opacity: 1, y: 0, duration: 0.03, stagger: 0.03 }, 
+            '-=0.4'
           );
         }
-      });
 
-      // Text typing effect
-      ScrollTrigger.create({
-        trigger: canvas,
-        start: 'top 60%',
-        onEnter: () => {
-          const text = "AI-Powered Learning";
-          const textElement = document.querySelector('.canvas-typing-text');
-          if (textElement) {
-            textElement.textContent = '';
-            gsap.to({}, {
-              duration: 2,
-              ease: 'none',
-              onUpdate: function() {
-                const progress = this.progress();
-                const currentLength = Math.floor(progress * text.length);
-                textElement.textContent = text.substring(0, currentLength);
-              }
-            });
-          }
+        if (subtitleElement) {
+          // Word-by-word reveal for subtitle
+          const subtitleText = subtitleElement.textContent;
+          subtitleElement.innerHTML = subtitleText.split(' ').map(word => 
+            `<span class="word">${word}</span>`
+          ).join(' ');
+          
+          const subtitleWords = subtitleElement.querySelectorAll('.word');
+          
+          tl.fromTo(subtitleWords, 
+            { opacity: 0, y: 15, rotateX: -90 }, 
+            { opacity: 1, y: 0, rotateX: 0, duration: 0.4, stagger: 0.1 }, 
+            '-=0.2'
+          );
         }
-      });
-    }
+
+        // Animate cards with enhanced effects
+        if (cardElements.length > 0) {
+          tl.fromTo(cardElements, 
+            { y: 50, opacity: 0, scale: 0.9, rotateY: -15 }, 
+            { y: 0, opacity: 1, scale: 1, rotateY: 0, duration: 0.6, stagger: 0.1 }, 
+            '-=0.4'
+          );
+
+          // Animate text within cards
+          cardElements.forEach((card, index) => {
+            const cardTitle = card.querySelector('.card-title, .stat-value, .path-title');
+            const cardText = card.querySelector('.card-subtitle, .stat-label, .path-description');
+            
+            if (cardTitle) {
+              gsap.fromTo(cardTitle, 
+                { opacity: 0, x: -20 }, 
+                { opacity: 1, x: 0, duration: 0.5, delay: 0.2 + (index * 0.1) }
+              );
+            }
+            
+            if (cardText) {
+              gsap.fromTo(cardText, 
+                { opacity: 0, x: 20 }, 
+                { opacity: 1, x: 0, duration: 0.5, delay: 0.3 + (index * 0.1) }
+              );
+            }
+          });
+        }
+
+        // Animate motivation section with special text effects
+        const motivationTitle = dashboardRef.current.querySelector('.motivation-title');
+        const motivationMessage = dashboardRef.current.querySelector('.motivation-message');
+        
+        if (motivationTitle) {
+          const motivationText = motivationTitle.textContent;
+          motivationTitle.innerHTML = motivationText.split(' ').map(word => 
+            `<span class="motivation-word">${word}</span>`
+          ).join(' ');
+          
+          const motivationWords = motivationTitle.querySelectorAll('.motivation-word');
+          
+          gsap.fromTo(motivationWords, 
+            { opacity: 0, scale: 0.8, y: 20 }, 
+            { 
+              opacity: 1, 
+              scale: 1, 
+              y: 0, 
+              duration: 0.6, 
+              stagger: 0.15,
+              ease: 'back.out(1.7)',
+              delay: 1.5
+            }
+          );
+        }
+
+        if (motivationMessage) {
+          gsap.fromTo(motivationMessage, 
+            { opacity: 0, y: 30 }, 
+            { opacity: 1, y: 0, duration: 0.8, delay: 2 }
+          );
+        }
+
+        // Animate learning path progress bars
+        const progressBars = dashboardRef.current.querySelectorAll('.progress-fill');
+        progressBars.forEach((bar, index) => {
+          const width = bar.style.width;
+          bar.style.width = '0%';
+          
+          gsap.to(bar, {
+            width: width,
+            duration: 1.5,
+            delay: 1 + (index * 0.2),
+            ease: 'power2.out'
+          });
+        });
+
+        // Animate task items with staggered reveal
+        const taskItems = dashboardRef.current.querySelectorAll('.task-item');
+        if (taskItems.length > 0) {
+          gsap.fromTo(taskItems, 
+            { opacity: 0, x: -30, rotateY: -15 }, 
+            { 
+              opacity: 1, 
+              x: 0, 
+              rotateY: 0, 
+              duration: 0.6, 
+              stagger: 0.1, 
+              delay: 1.2,
+              ease: 'back.out(1.2)'
+            }
+          );
+        }
+
+        // Animate achievement badges
+        const achievementItems = dashboardRef.current.querySelectorAll('.achievement-item');
+        if (achievementItems.length > 0) {
+          gsap.fromTo(achievementItems, 
+            { opacity: 0, scale: 0, rotation: -180 }, 
+            { 
+              opacity: 1, 
+              scale: 1, 
+              rotation: 0, 
+              duration: 0.8, 
+              stagger: 0.15, 
+              delay: 1.5,
+              ease: 'back.out(2)'
+            }
+          );
+        }
+      }
+
+      // Enhanced floating animation for icons
+      if (floatingIcons.length > 0) {
+        gsap.to(floatingIcons, {
+          y: -10,
+          duration: 2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'power2.inOut',
+          stagger: 0.3
+        });
+
+        // Add rotation animation to some icons
+        gsap.to(floatingIcons, {
+          rotation: 360,
+          duration: 20,
+          repeat: -1,
+          ease: 'none',
+          stagger: 2
+        });
+      }
+
+      // Add pulsing animation to action buttons
+      const actionButtons = dashboardRef.current.querySelectorAll('.btn');
+      if (actionButtons.length > 0) {
+        gsap.to(actionButtons, {
+          scale: 1.05,
+          duration: 2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'power2.inOut',
+          stagger: 0.5
+        });
+      }
+
+    }, 100); // Small delay to ensure DOM is ready
+
+    return () => {
+      clearTimeout(timer);
+      // Clean up ScrollTrigger instances
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    };
   }, []);
 
-  const learningModules = [
+  const dashboardStats = [
+    { label: 'Courses Completed', value: '12', icon: '', color: '#6366f1' },
+    { label: 'Hours Learned', value: '48', icon: '', color: '#10b981' },
+    { label: 'Current Streak', value: `${user.streak}`, icon: '', color: '#f59e0b' },
+    { label: 'Skill Level', value: user.level, icon: '', color: '#ef4444' }
+  ];
+
+  const learningPaths = [
     {
       id: 1,
-      title: 'JavaScript Fundamentals',
-      description: 'Master the basics of JavaScript programming',
-      progress: 75,
-      duration: '4 hours',
-      difficulty: 'Beginner',
-      color: '#6c8cff'
+      title: 'Full Stack Development',
+      description: 'Master modern web development from frontend to backend',
+      progress: 68,
+      modules: 12,
+      duration: '6 months',
+      level: 'Intermediate',
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      icon: ''
     },
     {
       id: 2,
-      title: 'React Development',
-      description: 'Build modern web applications with React',
-      progress: 45,
-      duration: '6 hours',
-      difficulty: 'Intermediate',
-      color: '#17d2c2'
+      title: 'AI & Machine Learning',
+      description: 'Dive deep into artificial intelligence and ML algorithms',
+      progress: 34,
+      modules: 15,
+      duration: '8 months',
+      level: 'Advanced',
+      color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      icon: ''
     },
     {
       id: 3,
-      title: 'Node.js Backend',
-      description: 'Create scalable server-side applications',
-      progress: 20,
-      duration: '8 hours',
-      difficulty: 'Advanced',
-      color: '#ff6b6b'
-    },
-    {
-      id: 4,
-      title: 'AI Interview Prep',
-      description: 'Practice technical interviews with AI proctor',
-      progress: 0,
-      duration: '3 hours',
-      difficulty: 'All Levels',
-      color: '#ffd93d'
+      title: 'Data Science Fundamentals',
+      description: 'Learn data analysis, visualization, and statistical methods',
+      progress: 89,
+      modules: 10,
+      duration: '4 months',
+      level: 'Beginner',
+      color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      icon: ''
     }
   ];
 
-  const recentActivities = [
-    { id: 1, action: 'Completed', item: 'JavaScript Arrays & Objects', time: '2 hours ago' },
-    { id: 2, action: 'Started', item: 'React Hooks Deep Dive', time: '1 day ago' },
-    { id: 3, action: 'Practiced', item: 'Mock Interview Session', time: '2 days ago' },
-    { id: 4, action: 'Achieved', item: '7-day learning streak!', time: '3 days ago' }
+  const upcomingTasks = [
+    { id: 1, title: 'Complete React Hooks Assignment', due: 'Today', priority: 'high' },
+    { id: 2, title: 'Practice Algorithm Problems', due: 'Tomorrow', priority: 'medium' },
+    { id: 3, title: 'Review Database Design', due: 'This Week', priority: 'low' },
+    { id: 4, title: 'Prepare for Mock Interview', due: 'Next Week', priority: 'high' }
+  ];
+
+  const achievements = [
+    { id: 1, title: 'First Course Completed', icon: '', unlocked: true },
+    { id: 2, title: '7-Day Streak Master', icon: '', unlocked: true },
+    { id: 3, title: 'JavaScript Expert', icon: '', unlocked: true },
+    { id: 4, title: 'AI Interview Pro', icon: '', unlocked: false }
   ];
 
   return (
-    <div ref={dashboardRef} className="main-dashboard">
-      {/* Welcome Section */}
-      <section className="welcome-section">
+    <div ref={dashboardRef} className="modern-dashboard">
+      {/* Dashboard Header */}
+      <div className="dashboard-header">
         <div className="container">
-          <div className="welcome-header">
-            <div>
-              <h1 className="welcome-title">Welcome back, {user.name}! 👋</h1>
-              <p className="welcome-subtitle">Ready to continue your learning journey?</p>
+          <div className="header-content">
+            <div className="welcome-section">
+              <h1 className="dashboard-title">
+                Good morning, {user.name}! 
+              </h1>
+              <p className="dashboard-subtitle">
+                Ready to continue your learning journey? You're making great progress!
+              </p>
             </div>
-            <div className="quick-actions">
-              <button className="btn btnPrimary">Start Learning</button>
-              <button className="btn btnGhost">Take Assessment</button>
-            </div>
-          </div>
-          <div>
-            <div ref={canvasRef} className="heroMock">
-              <div className="canvas-content">
-                <div className="canvas-header">
-                  <div className="canvas-element canvas-float-1">🤖</div>
-                  <div className="canvas-typing-text"></div>
-                  <div className="canvas-element canvas-float-2">📚</div>
-                </div>
-                
-                <div className="canvas-progress-container">
-                  <div className="canvas-progress-bar">
-                    <div className="canvas-progress-fill"></div>
-                  </div>
-                  <span className="canvas-progress-text">Learning Progress</span>
-                </div>
-
-                <div className="canvas-features">
-                  <div className="canvas-element canvas-feature">
-                    <div className="canvas-float-3">⚡</div>
-                    <span>Interactive</span>
-                  </div>
-                  <div className="canvas-element canvas-feature">
-                    <div className="canvas-float-1">🎯</div>
-                    <span>Personalized</span>
-                  </div>
-                  <div className="canvas-element canvas-feature">
-                    <div className="canvas-float-2">🚀</div>
-                    <span>Adaptive</span>
-                  </div>
-                </div>
-
-                <div className="canvas-footer">
-                  <div className="canvas-element canvas-pulse"></div>
-                  <span className="canvas-subtitle">GSAP Scroll Animations</span>
-                </div>
-              </div>
+            <div className="header-actions">
+              <Link to="/interview-practice" className="btn btn-primary">
+                <span className="floating-icon"></span>
+                Start AI Interview
+              </Link>
+              <Link to="/courses" className="btn btn-secondary">
+                Browse Courses
+              </Link>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Stats Overview */}
-      <section className="stats-section">
-        <div className="container">
+      <div className="container dashboard-content">
+        {/* Stats Overview */}
+        <section className="stats-overview">
           <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #6c8cff, #5576ff)' }}>
-                📚
-              </div>
-              <div className="stat-content">
-                <h3>{progress.completed}%</h3>
-                <p>Overall Progress</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #17d2c2, #14b8a6)' }}>
-                🔥
-              </div>
-              <div className="stat-content">
-                <h3>{user.streak}</h3>
-                <p>Day Streak</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #ff6b6b, #ef4444)' }}>
-                🎯
-              </div>
-              <div className="stat-content">
-                <h3>{user.level}</h3>
-                <p>Current Level</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #ffd93d, #f59e0b)' }}>
-                ⭐
-              </div>
-              <div className="stat-content">
-                <h3>1,250</h3>
-                <p>XP Points</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Learning Modules */}
-      <section className="modules-section">
-        <div className="container">
-          <div className="section-header">
-            <h2>Continue Learning</h2>
-            <Link to="/all-courses" className="view-all-link">View All Courses →</Link>
-          </div>
-          <div className="modules-grid">
-            {learningModules.map((module) => (
-              <div key={module.id} ref={addToCardsRef} className="module-card">
-                <div className="module-header">
-                  <div className="module-icon" style={{ backgroundColor: module.color }}>
-                    {module.title.charAt(0)}
-                  </div>
-                  <div className="module-meta">
-                    <span className="difficulty-badge">{module.difficulty}</span>
-                    <span className="duration">{module.duration}</span>
-                  </div>
+            {dashboardStats.map((stat, index) => (
+              <div key={index} className="dashboard-card stat-card">
+                <div className="stat-icon floating-icon" style={{ backgroundColor: stat.color }}>
+                  {stat.icon}
                 </div>
-                <h3 className="module-title">{module.title}</h3>
-                <p className="module-description">{module.description}</p>
-                <div className="progress-section">
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ 
-                        width: `${module.progress}%`,
-                        backgroundColor: module.color 
-                      }}
-                    ></div>
-                  </div>
-                  <span className="progress-text">{module.progress}% Complete</span>
+                <div className="stat-content">
+                  <h3 className="stat-value">{stat.value}</h3>
+                  <p className="stat-label">{stat.label}</p>
                 </div>
-                <button className="module-btn">
-                  {module.progress > 0 ? 'Continue' : 'Start Course'}
-                </button>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Recent Activity & Quick Access */}
-      <section className="activity-section">
-        <div className="container">
-          <div className="activity-grid">
-            {/* Recent Activity */}
-            <div ref={addToCardsRef} className="activity-card">
-              <h3>Recent Activity</h3>
-              <div className="activity-list">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="activity-item">
-                    <div className="activity-dot"></div>
-                    <div className="activity-content">
-                      <p>
-                        <span className="activity-action">{activity.action}</span> {activity.item}
-                      </p>
-                      <span className="activity-time">{activity.time}</span>
+        {/* Main Content Grid */}
+        <div className="dashboard-grid">
+          {/* Learning Paths */}
+          <section className="learning-paths-section">
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h2 className="card-title">Your Learning Paths</h2>
+                <Link to="/courses" className="view-all-btn">View All</Link>
+              </div>
+              <div className="learning-paths">
+                {learningPaths.map((path) => (
+                  <div key={path.id} className="learning-path-item">
+                    <div className="path-header">
+                      <div className="path-icon" style={{ background: path.color }}>
+                        {path.icon}
+                      </div>
+                      <div className="path-info">
+                        <h3 className="path-title">{path.title}</h3>
+                        <p className="path-description">{path.description}</p>
+                      </div>
                     </div>
+                    <div className="path-meta">
+                      <div className="path-stats">
+                        <span className="path-modules">{path.modules} modules</span>
+                        <span className="path-duration">{path.duration}</span>
+                        <span className={`path-level level-${path.level.toLowerCase()}`}>
+                          {path.level}
+                        </span>
+                      </div>
+                      <div className="path-progress">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ 
+                              width: `${path.progress}%`,
+                              background: path.color
+                            }}
+                          ></div>
+                        </div>
+                        <span className="progress-text">{path.progress}%</span>
+                      </div>
+                    </div>
+                    <button className="path-continue-btn">
+                      {path.progress > 0 ? 'Continue Learning' : 'Start Path'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Sidebar Content */}
+          <aside className="dashboard-sidebar">
+            {/* Upcoming Tasks */}
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3 className="card-title">Upcoming Tasks</h3>
+                <span className="task-count">{upcomingTasks.length}</span>
+              </div>
+              <div className="tasks-list">
+                {upcomingTasks.map((task) => (
+                  <div key={task.id} className="task-item">
+                    <div className={`task-priority priority-${task.priority}`}></div>
+                    <div className="task-content">
+                      <h4 className="task-title">{task.title}</h4>
+                      <span className="task-due">Due: {task.due}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link to="/tasks" className="view-all-tasks">View All Tasks</Link>
+            </div>
+
+            {/* Achievements */}
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3 className="card-title">Achievements</h3>
+                <span className="achievement-count">3/4</span>
+              </div>
+              <div className="achievements-grid">
+                {achievements.map((achievement) => (
+                  <div 
+                    key={achievement.id} 
+                    className={`achievement-item ${achievement.unlocked ? 'unlocked' : 'locked'}`}
+                  >
+                    <div className="achievement-icon floating-icon">
+                      {achievement.icon}
+                    </div>
+                    <span className="achievement-title">{achievement.title}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Quick Access */}
-            <div ref={addToCardsRef} className="quick-access-card">
-              <h3>Quick Access</h3>
-              <div className="quick-actions-grid">
-                <Link to="/practice" className="quick-action">
-                  <div className="quick-icon">🎯</div>
-                  <span>Practice Tests</span>
+            {/* Quick Actions */}
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3 className="card-title">Quick Actions</h3>
+              </div>
+              <div className="quick-actions">
+                <Link to="/interview-practice" className="quick-action-btn">
+                  <span className="action-icon"></span>
+                  Practice Interview
                 </Link>
-                <Link to="/interview" className="quick-action">
-                  <div className="quick-icon">🤖</div>
-                  <span>AI Interview</span>
+                <Link to="/assessment" className="quick-action-btn">
+                  <span className="action-icon"></span>
+                  Take Assessment
                 </Link>
-                <Link to="/progress" className="quick-action">
-                  <div className="quick-icon">📊</div>
-                  <span>Progress Report</span>
+                <Link to="/progress" className="quick-action-btn">
+                  <span className="action-icon"></span>
+                  View Progress
                 </Link>
-                <Link to="/certificates" className="quick-action">
-                  <div className="quick-icon">🏆</div>
-                  <span>Certificates</span>
+                <Link to="/certificates" className="quick-action-btn">
+                  <span className="action-icon"></span>
+                  My Certificates
                 </Link>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
-      </section>
 
-      {/* Motivational Section */}
-      <section className="motivation-section">
-        <div className="container">
-          <div ref={addToCardsRef} className="motivation-card">
+        {/* Daily Motivation */}
+        <section className="motivation-section">
+          <div className="dashboard-card motivation-card">
             <div className="motivation-content">
-              <h3>🚀 Keep Going!</h3>
-              <p>You're doing great! Complete one more lesson today to maintain your streak.</p>
-              <div className="motivation-progress">
+              <div className="motivation-text">
+                <h3 className="motivation-title">
+                  <span className="floating-icon"></span>
+                  Keep up the momentum!
+                </h3>
+                <p className="motivation-message">
+                  You're on a {user.streak}-day learning streak! Complete today's lesson to keep it going.
+                </p>
+              </div>
+              <div className="daily-progress">
+                <div className="progress-circle">
+                  <svg className="progress-ring" width="80" height="80">
+                    <circle
+                      className="progress-ring-background"
+                      stroke="#e5e7eb"
+                      strokeWidth="6"
+                      fill="transparent"
+                      r="34"
+                      cx="40"
+                      cy="40"
+                    />
+                    <circle
+                      className="progress-ring-progress"
+                      stroke="url(#gradient)"
+                      strokeWidth="6"
+                      fill="transparent"
+                      r="34"
+                      cx="40"
+                      cy="40"
+                      strokeDasharray="213.6"
+                      strokeDashoffset="64"
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="progress-text">70%</div>
+                </div>
                 <div className="daily-goal">
-                  <span>Daily Goal: 2/3 lessons</span>
-                  <div className="goal-bar">
-                    <div className="goal-fill" style={{ width: '66%' }}></div>
-                  </div>
+                  <span className="goal-label">Daily Goal</span>
+                  <span className="goal-status">2/3 lessons</span>
                 </div>
               </div>
             </div>
-            <button className="btn btnPrimary">Complete Next Lesson</button>
+            <button className="btn btn-gradient">
+              Complete Next Lesson
+            </button>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

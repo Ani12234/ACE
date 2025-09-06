@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import './App.css';
 
@@ -14,9 +14,19 @@ import Footer from './components/Footer';
 
 function AppContent() {
   const { isAuthenticated, user, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
+    setMobileMenuOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -27,22 +37,31 @@ function AppContent() {
             <span className="brand-logo" aria-hidden>AI</span>
             <span className="brand-text">E‑Learning & Proctor</span>
           </Link>
-          <nav className="header-nav" aria-label="Primary">
-            <Link to="/" className="nav-link">Home</Link>
-            <Link to="/about" className="nav-link">About</Link>
-            <Link to="/features" className="nav-link">Features</Link>
-            <Link to="/interview-practice" className="nav-link">AI Interview</Link>
+          
+          <button 
+            className="mobile-menu-toggle"
+            onClick={toggleMobileMenu}
+            aria-label="Toggle mobile menu"
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+          
+          <nav className={`header-nav ${mobileMenuOpen ? 'open' : ''}`} aria-label="Primary">
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="nav-link">Dashboard</Link>
+                <Link to="/" className="nav-link" onClick={closeMobileMenu}>Home</Link>
+                <Link to="/about" className="nav-link" onClick={closeMobileMenu}>About</Link>
+                <Link to="/features" className="nav-link" onClick={closeMobileMenu}>Features</Link>
+                <Link to="/interview-practice" className="nav-link" onClick={closeMobileMenu}>AI Interview</Link>
+                <Link to="/dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
                 <button onClick={handleLogout} className="nav-link logout-btn">
-                  Logout ({user?.name || 'User'})
+                  Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="nav-link">Login</Link>
-                <Link to="/signup" className="nav-link">Sign Up</Link>
+                <Link to="/login" className="nav-link" onClick={closeMobileMenu}>Login</Link>
+                <Link to="/signup" className="nav-link" onClick={closeMobileMenu}>Sign Up</Link>
               </>
             )}
           </nav>
@@ -51,9 +70,9 @@ function AppContent() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/interview-practice" element={<InterviewPractice />} />
+          <Route path="/about" element={isAuthenticated ? <About /> : <Navigate to="/login" replace />} />
+          <Route path="/features" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
+          <Route path="/interview-practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
           <Route path="/dashboard" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
           <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
           <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />} />
