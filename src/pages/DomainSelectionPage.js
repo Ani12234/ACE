@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { gsap } from 'gsap';
 
 const DomainSelectionPage = () => {
   const [selectedDomain, setSelectedDomain] = useState(null);
-  const [step, setStep] = useState(1); // 1: domain selection, 2: experience level
+  const [step, setStep] = useState(1); // 1: domain selection, 2: course details, 3: experience level
   const navigate = useNavigate();
-  const cardsRef = useRef([]);
-  const animationsRef = useRef([]);
 
   const domains = [
     {
@@ -18,7 +15,37 @@ const DomainSelectionPage = () => {
       color: '#3b82f6',
       skills: ['HTML/CSS', 'JavaScript', 'React', 'Node.js'],
       careerPaths: ['Frontend Developer', 'UI/UX Developer', 'Web Designer'],
-      averageSalary: '$75,000'
+      averageSalary: '$75,000',
+      courses: [
+        {
+          id: 'web-fundamentals',
+          title: 'Web Development Fundamentals',
+          description: 'Master the essential building blocks of modern web development. Learn HTML5 for semantic structure, CSS3 for stunning designs, and JavaScript for interactive functionality.',
+          duration: '120 hours',
+          weeks: '8 weeks',
+          level: 'Beginner',
+          videos: [
+            { title: 'HTML5 Semantic Elements', duration: '15 min', thumbnail: '🎥' },
+            { title: 'CSS Grid & Flexbox Mastery', duration: '22 min', thumbnail: '🎥' },
+            { title: 'JavaScript DOM Manipulation', duration: '18 min', thumbnail: '🎥' },
+            { title: 'Responsive Design Principles', duration: '20 min', thumbnail: '🎥' }
+          ]
+        },
+        {
+          id: 'react-advanced',
+          title: 'Advanced React Development',
+          description: 'Build complex, scalable React applications with hooks, context, state management, and modern development practices.',
+          duration: '80 hours',
+          weeks: '6 weeks',
+          level: 'Intermediate',
+          videos: [
+            { title: 'React Hooks Deep Dive', duration: '25 min', thumbnail: '🎥' },
+            { title: 'State Management with Redux', duration: '30 min', thumbnail: '🎥' },
+            { title: 'React Performance Optimization', duration: '20 min', thumbnail: '🎥' },
+            { title: 'Testing React Applications', duration: '18 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     },
     {
       id: 'machine-learning',
@@ -28,7 +55,37 @@ const DomainSelectionPage = () => {
       color: '#10b981',
       skills: ['Python', 'TensorFlow', 'Statistics', 'Data Analysis'],
       careerPaths: ['ML Engineer', 'Data Scientist', 'AI Researcher'],
-      averageSalary: '$120,000'
+      averageSalary: '$120,000',
+      courses: [
+        {
+          id: 'ml-fundamentals',
+          title: 'Machine Learning Fundamentals',
+          description: 'Introduction to machine learning concepts, algorithms, and practical implementation using Python and popular ML libraries.',
+          duration: '150 hours',
+          weeks: '10 weeks',
+          level: 'Beginner',
+          videos: [
+            { title: 'Introduction to Machine Learning', duration: '20 min', thumbnail: '🎥' },
+            { title: 'Linear Regression & Classification', duration: '28 min', thumbnail: '🎥' },
+            { title: 'Neural Networks Basics', duration: '25 min', thumbnail: '🎥' },
+            { title: 'Model Evaluation & Validation', duration: '22 min', thumbnail: '🎥' }
+          ]
+        },
+        {
+          id: 'deep-learning',
+          title: 'Deep Learning with TensorFlow',
+          description: 'Advanced deep learning techniques using TensorFlow and Keras for computer vision, NLP, and complex AI applications.',
+          duration: '200 hours',
+          weeks: '12 weeks',
+          level: 'Advanced',
+          videos: [
+            { title: 'Deep Neural Networks', duration: '35 min', thumbnail: '🎥' },
+            { title: 'Convolutional Neural Networks', duration: '40 min', thumbnail: '🎥' },
+            { title: 'Recurrent Neural Networks', duration: '32 min', thumbnail: '🎥' },
+            { title: 'Transfer Learning & Fine-tuning', duration: '28 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     },
     {
       id: 'backend-development',
@@ -38,7 +95,37 @@ const DomainSelectionPage = () => {
       color: '#8b5cf6',
       skills: ['Node.js', 'Databases', 'APIs', 'Cloud Services'],
       careerPaths: ['Backend Developer', 'DevOps Engineer', 'System Architect'],
-      averageSalary: '$95,000'
+      averageSalary: '$95,000',
+      courses: [
+        {
+          id: 'backend-fundamentals',
+          title: 'Backend Development Fundamentals',
+          description: 'Learn server-side programming with Node.js, database design, RESTful APIs, and authentication systems.',
+          duration: '100 hours',
+          weeks: '8 weeks',
+          level: 'Beginner',
+          videos: [
+            { title: 'Node.js & Express Setup', duration: '18 min', thumbnail: '🎥' },
+            { title: 'Database Design & MongoDB', duration: '25 min', thumbnail: '🎥' },
+            { title: 'RESTful API Development', duration: '30 min', thumbnail: '🎥' },
+            { title: 'Authentication & Security', duration: '22 min', thumbnail: '🎥' }
+          ]
+        },
+        {
+          id: 'microservices',
+          title: 'Microservices Architecture',
+          description: 'Design and implement scalable microservices using Docker, Kubernetes, and cloud-native technologies.',
+          duration: '120 hours',
+          weeks: '10 weeks',
+          level: 'Advanced',
+          videos: [
+            { title: 'Microservices Design Patterns', duration: '28 min', thumbnail: '🎥' },
+            { title: 'Docker & Containerization', duration: '25 min', thumbnail: '🎥' },
+            { title: 'Kubernetes Orchestration', duration: '35 min', thumbnail: '🎥' },
+            { title: 'API Gateway & Service Mesh', duration: '30 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     },
     {
       id: 'fullstack-development',
@@ -48,7 +135,23 @@ const DomainSelectionPage = () => {
       color: '#f59e0b',
       skills: ['Frontend', 'Backend', 'Databases', 'DevOps'],
       careerPaths: ['Full Stack Developer', 'Technical Lead', 'Product Engineer'],
-      averageSalary: '$110,000'
+      averageSalary: '$110,000',
+      courses: [
+        {
+          id: 'fullstack-bootcamp',
+          title: 'Full Stack Development Bootcamp',
+          description: 'Complete full stack development course covering React, Node.js, databases, and deployment strategies.',
+          duration: '180 hours',
+          weeks: '12 weeks',
+          level: 'Intermediate',
+          videos: [
+            { title: 'Full Stack Architecture Overview', duration: '20 min', thumbnail: '🎥' },
+            { title: 'Frontend-Backend Integration', duration: '30 min', thumbnail: '🎥' },
+            { title: 'Database Integration & ORMs', duration: '25 min', thumbnail: '🎥' },
+            { title: 'Deployment & DevOps Basics', duration: '28 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     },
     {
       id: 'data-science',
@@ -58,7 +161,23 @@ const DomainSelectionPage = () => {
       color: '#06b6d4',
       skills: ['Python/R', 'Statistics', 'Data Visualization', 'SQL', 'Business Intelligence'],
       careerPaths: ['Data Scientist', 'Data Analyst', 'Business Intelligence Developer'],
-      averageSalary: '$90,000 - $135,000'
+      averageSalary: '$90,000 - $135,000',
+      courses: [
+        {
+          id: 'data-science-fundamentals',
+          title: 'Data Science Fundamentals',
+          description: 'Learn data analysis, visualization, and statistical modeling using Python, pandas, and popular data science libraries.',
+          duration: '140 hours',
+          weeks: '10 weeks',
+          level: 'Beginner',
+          videos: [
+            { title: 'Data Analysis with Pandas', duration: '25 min', thumbnail: '🎥' },
+            { title: 'Data Visualization with Matplotlib', duration: '20 min', thumbnail: '🎥' },
+            { title: 'Statistical Analysis & Hypothesis Testing', duration: '30 min', thumbnail: '🎥' },
+            { title: 'SQL for Data Science', duration: '22 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     },
     {
       id: 'cybersecurity',
@@ -68,7 +187,23 @@ const DomainSelectionPage = () => {
       color: '#ef4444',
       skills: ['Network Security', 'Ethical Hacking', 'Risk Assessment', 'Compliance', 'Incident Response'],
       careerPaths: ['Security Analyst', 'Penetration Tester', 'Security Architect'],
-      averageSalary: '$85,000 - $140,000'
+      averageSalary: '$85,000 - $140,000',
+      courses: [
+        {
+          id: 'cybersecurity-fundamentals',
+          title: 'Cybersecurity Fundamentals',
+          description: 'Learn network security, ethical hacking techniques, risk assessment, and incident response procedures.',
+          duration: '160 hours',
+          weeks: '12 weeks',
+          level: 'Beginner',
+          videos: [
+            { title: 'Network Security Basics', duration: '25 min', thumbnail: '🎥' },
+            { title: 'Ethical Hacking & Penetration Testing', duration: '35 min', thumbnail: '🎥' },
+            { title: 'Risk Assessment & Management', duration: '20 min', thumbnail: '🎥' },
+            { title: 'Incident Response & Forensics', duration: '30 min', thumbnail: '🎥' }
+          ]
+        }
+      ]
     }
   ];
 
@@ -99,52 +234,13 @@ const DomainSelectionPage = () => {
     }
   ];
 
-  useEffect(() => {
-    // Initialize animations
-    const initializeAnimations = () => {
-      try {
-        // Clear any existing animations
-        animationsRef.current.forEach(animation => {
-          if (animation && typeof animation.kill === 'function') {
-            animation.kill();
-          }
-        });
-        animationsRef.current = [];
-
-        // Animate page entrance
-        const tl = gsap.timeline();
-        
-        tl.fromTo('.domain-hero', 
-          { y: 50, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
-        );
-
-        tl.fromTo('.domain-card', 
-          { y: 30, opacity: 0, scale: 0.9 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.1, ease: 'back.out(1.7)' },
-          '-=0.4'
-        );
-
-        animationsRef.current.push(tl);
-      } catch (error) {
-        console.error('Animation error:', error);
-      }
-    };
-
-    const timer = setTimeout(initializeAnimations, 100);
-    return () => {
-      clearTimeout(timer);
-      animationsRef.current.forEach(animation => {
-        if (animation && typeof animation.kill === 'function') {
-          animation.kill();
-        }
-      });
-    };
-  }, [step]);
-
   const handleDomainSelect = (domain) => {
     setSelectedDomain(domain);
     setStep(2);
+  };
+
+  const handleContinueToExperience = () => {
+    setStep(3);
   };
 
   const handleExperienceSelect = (experience) => {
@@ -167,8 +263,12 @@ const DomainSelectionPage = () => {
   };
 
   const handleBack = () => {
-    setStep(1);
-    setSelectedDomain(null);
+    if (step === 3) {
+      setStep(2);
+    } else {
+      setStep(1);
+      setSelectedDomain(null);
+    }
   };
 
   return (
@@ -187,7 +287,6 @@ const DomainSelectionPage = () => {
                   key={domain.id}
                   className="domain-card"
                   onClick={() => handleDomainSelect(domain)}
-                  ref={el => cardsRef.current[index] = el}
                 >
                   <div className="domain-icon" style={{ color: domain.color }}>
                     {domain.icon}
@@ -222,6 +321,52 @@ const DomainSelectionPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </>
+        ) : step === 2 ? (
+          <>
+            <div className="domain-hero">
+              <button className="back-btn" onClick={handleBack}>← Back</button>
+              <h1>{selectedDomain?.title} Courses</h1>
+              <p>Explore our comprehensive courses designed for {selectedDomain?.title.toLowerCase()}</p>
+            </div>
+
+            <div className="courses-overview">
+              {selectedDomain?.courses?.map((course) => (
+                <div key={course.id} className="course-detail-card">
+                  <div className="course-header">
+                    <h3>{course.title}</h3>
+                    <div className="course-meta">
+                      <span className="course-duration">⏱️ {course.duration}</span>
+                      <span className="course-weeks">📅 {course.weeks}</span>
+                      <span className="course-level">📊 {course.level}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="course-description">{course.description}</p>
+                  
+                  <div className="course-videos">
+                    <h4>Course Videos:</h4>
+                    <div className="videos-grid">
+                      {course.videos.map((video, index) => (
+                        <div key={index} className="video-item">
+                          <div className="video-thumbnail">{video.thumbnail}</div>
+                          <div className="video-info">
+                            <h5>{video.title}</h5>
+                            <span className="video-duration">{video.duration}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="continue-section">
+              <button className="btn btnPrimary" onClick={handleContinueToExperience}>
+                Continue to Experience Level
+              </button>
             </div>
           </>
         ) : (

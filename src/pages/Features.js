@@ -94,6 +94,7 @@ function Features() {
             <div className="features-cta" data-fade>
               <Link to="/signup" className="btn btnPrimary">Start Free Trial</Link>
               <Link to="/interview-practice" className="btn btnGhost">Try AI Interview</Link>
+              <Link to="/domain-selection" className="btn btnSecondary">Select the Domain</Link>
             </div>
           </div>
         </div>
