@@ -30,7 +30,6 @@ function Home() {
     
     // Check if device is mobile
     const isMobile = window.innerWidth <= 768;
-    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
     
     // Reduce motion for users who prefer it
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -160,6 +159,25 @@ function Home() {
                 trigger: section,
                 start: 'top 85%',
                 end: 'top 50%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+          break;
+        default:
+          // Default animation - slide up from bottom
+          gsap.fromTo(
+            section,
+            { y: distance, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: duration,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: section,
+                start: isMobile ? 'top 95%' : 'top 85%',
+                end: isMobile ? 'top 70%' : 'top 50%',
                 toggleActions: 'play none none reverse'
               }
             }

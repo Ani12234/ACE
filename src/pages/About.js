@@ -9,6 +9,8 @@ function About() {
   const heroRef = useRef(null);
   const sectionsRef = useRef([]);
   const statsRef = useRef([]);
+  const animationsRef = useRef([]);
+  const timeoutRef = useRef(null);
 
   const addToSectionsRef = (el) => {
     if (el && !sectionsRef.current.includes(el)) {
@@ -23,67 +25,187 @@ function About() {
   };
 
   useEffect(() => {
+    // Validate element before animating
+    const validateElement = (element) => {
+      return element && 
+             element.parentNode && 
+             element.isConnected && 
+             document.contains(element);
+    };
+
+    // Safe element selector with validation
+    const safeQuerySelector = (container, selector) => {
+      try {
+        if (!container) return [];
+        
+        const elements = container.querySelectorAll(selector);
+        return Array.from(elements).filter(el => {
+          return el && 
+                 el.parentNode && 
+                 el.isConnected && 
+                 document.contains(el);
+        });
+      } catch (error) {
+        console.warn(`Safe selector failed for: ${selector}`, error);
+        return [];
+      }
+    };
+
+    // Clean up previous animations and timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    animationsRef.current.forEach(animation => {
+      if (animation && typeof animation.kill === 'function') {
+        animation.kill();
+      }
+    });
+    animationsRef.current = [];
+    
+    // Clear all GSAP animations
+    gsap.killTweensOf("*");
+    
+    // Clear ScrollTrigger instances
+    ScrollTrigger.getAll().forEach(trigger => {
+      if (trigger && typeof trigger.kill === 'function') {
+        trigger.kill();
+      }
+    });
+
     const isMobile = window.innerWidth <= 768;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Hero animation
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    tl.fromTo(
-      heroRef.current.querySelectorAll('[data-fade]'),
-      { y: isMobile ? 20 : 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: isMobile ? 0.6 : 0.9, stagger: isMobile ? 0.08 : 0.12 }
-    );
-
-    // Section animations
-    if (!prefersReducedMotion) {
-      sectionsRef.current.forEach((section, index) => {
-        gsap.fromTo(
-          section,
-          { y: isMobile ? 30 : 50, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: isMobile ? 0.6 : 0.8,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: section,
-              start: isMobile ? 'top 90%' : 'top 80%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      });
-
-      // Stats counter animation
-      statsRef.current.forEach((stat, index) => {
-        const number = stat.querySelector('.stat-number');
-        const finalValue = parseInt(number.textContent);
-        
-        ScrollTrigger.create({
-          trigger: stat,
-          start: 'top 80%',
-          onEnter: () => {
-            gsap.fromTo(stat, 
-              { scale: 0.8, opacity: 0 },
-              { scale: 1, opacity: 1, duration: 0.5, delay: index * 0.1 }
+    // Wait for DOM to be ready
+    timeoutRef.current = setTimeout(() => {
+      try {
+        // Hero animation with validation
+        if (validateElement(heroRef.current)) {
+          const heroElements = safeQuerySelector(heroRef.current, '[data-fade]');
+          
+          if (heroElements.length > 0) {
+            const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            const heroAnim = tl.fromTo(
+              heroElements,
+              { y: isMobile ? 20 : 30, opacity: 0 },
+              { y: 0, opacity: 1, duration: isMobile ? 0.6 : 0.9, stagger: isMobile ? 0.08 : 0.12 }
             );
-            
-            gsap.fromTo({ value: 0 }, {
-              value: finalValue,
-              duration: 2,
-              delay: index * 0.1,
-              ease: 'power2.out',
-              onUpdate: function() {
-                number.textContent = Math.round(this.targets()[0].value) + (number.dataset.suffix || '');
-              }
-            });
+            animationsRef.current.push(heroAnim);
           }
-        });
-      });
-    }
+        }
+
+        // Section animations with validation
+        if (!prefersReducedMotion) {
+          const validSections = sectionsRef.current.filter(validateElement);
+          
+          validSections.forEach((section, index) => {
+            if (validateElement(section)) {
+              try {
+                const sectionAnim = gsap.fromTo(
+                  section,
+                  { y: isMobile ? 30 : 50, opacity: 0 },
+                  {
+                    y: 0,
+                    opacity: 1,
+                    duration: isMobile ? 0.6 : 0.8,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                      trigger: section,
+                      start: isMobile ? 'top 90%' : 'top 80%',
+                      toggleActions: 'play none none reverse'
+                    }
+                  }
+                );
+                animationsRef.current.push(sectionAnim);
+              } catch (error) {
+                console.warn(`Section animation error for section ${index}:`, error);
+              }
+            }
+          });
+
+          // Stats counter animation with enhanced validation
+          const validStats = statsRef.current.filter(validateElement);
+          
+          validStats.forEach((stat, index) => {
+            if (!validateElement(stat)) return;
+            
+            try {
+              const number = stat.querySelector('.stat-number');
+              if (!validateElement(number)) return;
+              
+              const finalValue = parseInt(number.textContent) || 0;
+              
+              const scrollTrigger = ScrollTrigger.create({
+                trigger: stat,
+                start: 'top 80%',
+                onEnter: () => {
+                  // Double-check element validity before animating
+                  if (!validateElement(stat) || !validateElement(number)) return;
+                  
+                  try {
+                    const statAnim = gsap.fromTo(stat, 
+                      { scale: 0.8, opacity: 0 },
+                      { scale: 1, opacity: 1, duration: 0.5, delay: index * 0.1 }
+                    );
+                    animationsRef.current.push(statAnim);
+                    
+                    const counterAnim = gsap.fromTo({ value: 0 }, {
+                      value: finalValue,
+                      duration: 2,
+                      delay: index * 0.1,
+                      ease: 'power2.out',
+                      onUpdate: function() {
+                        if (validateElement(number)) {
+                          const currentValue = Math.round(this.targets()[0].value);
+                          const suffix = number.dataset.suffix || '';
+                          number.textContent = currentValue + suffix;
+                        }
+                      }
+                    });
+                    animationsRef.current.push(counterAnim);
+                  } catch (error) {
+                    console.warn(`Stats animation error for stat ${index}:`, error);
+                  }
+                }
+              });
+              
+              animationsRef.current.push(scrollTrigger);
+            } catch (error) {
+              console.warn(`Stats setup error for stat ${index}:`, error);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('About page animation initialization error:', error);
+      }
+    }, 200);
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      try {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        
+        // Kill all tracked animations
+        animationsRef.current.forEach(animation => {
+          if (animation && typeof animation.kill === 'function') {
+            animation.kill();
+          }
+        });
+        animationsRef.current = [];
+        
+        // Clean up all GSAP animations
+        gsap.killTweensOf("*");
+        
+        // Clean up ScrollTrigger instances
+        ScrollTrigger.getAll().forEach(trigger => {
+          if (trigger && typeof trigger.kill === 'function') {
+            trigger.kill();
+          }
+        });
+      } catch (error) {
+        console.warn('About page animation cleanup error:', error);
+      }
     };
   }, []);
 

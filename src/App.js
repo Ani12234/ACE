@@ -11,12 +11,28 @@ import MainHomePage from './pages/MainHomePage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Footer from './components/Footer';
-import DomainSelection from './components/DomainSelection';
+import DomainSelectionPage from './pages/DomainSelectionPage';
 import CourseRecommendations from './components/CourseRecommendations';
 import CourseDetail from './components/CourseDetail';
+
 function AppContent() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Check if user has completed domain selection
+  const hasCompletedDomainSelection = () => {
+    const selection = localStorage.getItem('userDomainSelection');
+    return selection !== null;
+  };
+
+  // Determine where authenticated users should go
+  const getAuthenticatedRoute = () => {
+    if (hasCompletedDomainSelection()) {
+      return <MainHomePage />;
+    } else {
+      return <Navigate to="/domain-selection" replace />;
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -72,13 +88,16 @@ function AppContent() {
       </header>
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={isAuthenticated ? getAuthenticatedRoute() : <Home />} />
           <Route path="/about" element={isAuthenticated ? <About /> : <Navigate to="/login" replace />} />
           <Route path="/features" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
           <Route path="/interview-practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
           <Route path="/dashboard" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
-          <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+          <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />} />
+          <Route path="/domain-selection" element={isAuthenticated ? <DomainSelectionPage /> : <Navigate to="/login" replace />} />
+          <Route path="/course-recommendations" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
+          <Route path="/course-detail/:courseId" element={isAuthenticated ? <CourseDetail /> : <Navigate to="/login" replace />} />
           {/* Placeholder routes for future pages */}
           <Route path="/courses" element={<Navigate to="/dashboard" replace />} />
           <Route path="/assessment" element={<Navigate to="/interview-practice" replace />} />

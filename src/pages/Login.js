@@ -18,32 +18,91 @@ function Login() {
   const [selectedDomainData, setSelectedDomainData] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const animationsRef = useRef([]);
 
   useEffect(() => {
-    const card = cardRef.current;
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-    tl.fromTo(card, { y: 24, opacity: 0, rotateX: -6 }, { y: 0, opacity: 1, rotateX: 0, duration: 0.7 });
-    tl.fromTo(card.querySelectorAll('[data-stagger]'), { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, '<0.05');
+    // Validate element before animating
+    const validateElement = (element) => {
+      return element && 
+             element.parentNode && 
+             element.isConnected && 
+             document.contains(element);
+    };
 
-    // ScrollTrigger for below-the-fold feature items
-    const featureItems = document.querySelectorAll('[data-feature-item]');
-    featureItems.forEach((el) => {
-      gsap.fromTo(
-        el,
-        { y: 30, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.6,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 85%',
-            toggleActions: 'play none none reverse'
-          }
-        }
-      );
+    // Clean up previous animations
+    animationsRef.current.forEach(animation => {
+      if (animation && typeof animation.kill === 'function') {
+        animation.kill();
+      }
     });
+    animationsRef.current = [];
+
+    const card = cardRef.current;
+    if (validateElement(card)) {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      
+      const mainAnim = tl.fromTo(card, 
+        { y: 24, opacity: 0, rotateX: -6 }, 
+        { y: 0, opacity: 1, rotateX: 0, duration: 0.7 }
+      );
+      
+      // Validate stagger elements before animating
+      const staggerElements = card.querySelectorAll('[data-stagger]');
+      const validStaggerElements = Array.from(staggerElements).filter(validateElement);
+      
+      if (validStaggerElements.length > 0) {
+        const staggerAnim = tl.fromTo(validStaggerElements, 
+          { y: 16, opacity: 0 }, 
+          { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, 
+          '<0.05'
+        );
+        animationsRef.current.push(staggerAnim);
+      }
+      
+      animationsRef.current.push(mainAnim);
+    }
+
+    // ScrollTrigger for below-the-fold feature items with validation
+    const featureItems = document.querySelectorAll('[data-feature-item]');
+    const validFeatureItems = Array.from(featureItems).filter(validateElement);
+    
+    validFeatureItems.forEach((el) => {
+      if (validateElement(el)) {
+        const scrollAnim = gsap.fromTo(
+          el,
+          { y: 30, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.6,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 85%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+        animationsRef.current.push(scrollAnim);
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      animationsRef.current.forEach(animation => {
+        if (animation && typeof animation.kill === 'function') {
+          animation.kill();
+        }
+      });
+      animationsRef.current = [];
+      
+      // Clean up ScrollTrigger instances
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger && typeof trigger.kill === 'function') {
+          trigger.kill();
+        }
+      });
+    };
   }, []);
 
   const handleLogin = async (e) => {

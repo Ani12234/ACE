@@ -29,7 +29,6 @@ function InterviewPractice() {
 
   useEffect(() => {
     const isMobile = window.innerWidth <= 768;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Hero animation
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });

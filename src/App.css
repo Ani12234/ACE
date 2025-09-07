@@ -1549,7 +1549,7 @@ body {
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 24px;
   }
   
   .stats-grid {
@@ -2102,7 +2102,7 @@ body {
 .experience-card {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 20px;
-  padding: 32px 24px;
+  padding: 32px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -2261,6 +2261,732 @@ body {
     font-size: 1.8rem;
   }
   
+  .domain-card,
+  .experience-card {
+    padding: 16px;
+  }
+}
+
+/* Dashboard Loading Styles */
+.dashboard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.spinner-ring {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(108, 140, 255, 0.1);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  position: relative;
+}
+
+.spinner-ring::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border: 3px solid transparent;
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 2s linear infinite reverse;
+}
+
+.loading-text {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Enhanced Dashboard Card Animations */
+.dashboard-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Professional Button Hover Effects */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(108, 140, 255, 0.3);
+}
+
+/* Learning Path Item Enhancements */
+.learning-path-item {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+.learning-path-item:hover {
+  transform: translateX(8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Task Item Ripple Effect Support */
+.task-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.task-item:hover {
+  background: rgba(108, 140, 255, 0.05);
+  transform: translateX(4px);
+}
+
+/* Achievement Item Glow Effect */
+.achievement-item.unlocked {
+  position: relative;
+}
+
+.achievement-item.unlocked::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--primary), var(--accent), var(--primary));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.3;
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  0% { opacity: 0.3; transform: scale(1); }
+  100% { opacity: 0.6; transform: scale(1.02); }
+}
+
+/* Progress Bar Shimmer Effect */
+.progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Floating Icon Breathing Animation */
+.floating-icon {
+  will-change: transform;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+/* Character Animation Support */
+.char {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+/* Motivation Card Special Effects */
+.motivation-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.motivation-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(108, 140, 255, 0.05), rgba(23, 210, 194, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.motivation-card:hover::before {
+  opacity: 1;
+}
+
+/* Progress Ring Animation */
+.progress-ring-progress {
+  transition: stroke-dashoffset 0.3s ease;
+  filter: drop-shadow(0 0 6px rgba(108, 140, 255, 0.4));
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .floating-icon {
+    animation: none;
+  }
+  
+  .spinner-ring,
+  .spinner-ring::before {
+    animation: none;
+  }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .dashboard-card:hover {
+    transform: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .learning-path-item:hover {
+    transform: none;
+  }
+  
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* Domain Selection Page Styles */
+.domain-selection-page {
+  min-height: 100vh;
+  padding: 80px 0 40px;
+  background: var(--bg);
+}
+
+.domain-hero {
+  text-align: center;
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.domain-hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.domain-hero p {
+  font-size: 1.2rem;
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: rgba(108, 140, 255, 0.1);
+  border: 1px solid rgba(108, 140, 255, 0.2);
+  color: var(--primary);
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: rgba(108, 140, 255, 0.2);
+  transform: translateX(-4px);
+}
+
+.domains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.domain-card {
+  background: rgba(18, 24, 41, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 32px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.domain-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(108, 140, 255, 0.05), rgba(23, 210, 194, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.domain-card:hover::before {
+  opacity: 1;
+}
+
+.domain-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(108, 140, 255, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.domain-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.domain-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.domain-card > p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.domain-details {
+  position: relative;
+  z-index: 1;
+}
+
+.skills h4,
+.career-paths h4,
+.salary h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.skill-tag {
+  background: rgba(108, 140, 255, 0.1);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid rgba(108, 140, 255, 0.2);
+}
+
+.career-info {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.career-paths ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.career-paths li {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  position: relative;
+  padding-left: 16px;
+}
+
+.career-paths li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.salary {
+  text-align: right;
+}
+
+.salary-amount {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Experience Level Styles */
+.experience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.experience-card {
+  text-align: center;
+}
+
+.experience-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.experience-details {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.experience-details > div {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.experience-details strong {
+  color: var(--text);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .domain-hero h1 {
+    font-size: 2rem;
+  }
+  
+  .domains-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .domain-card {
+    padding: 24px;
+  }
+  
+  .career-info {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .salary {
+    text-align: left;
+  }
+  
+  .back-btn {
+    position: static;
+    margin-bottom: 20px;
+    display: inline-block;
+  }
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 768px) {
+  .domain-selection-page {
+    padding: 60px 0 20px;
+  }
+
+  .domain-hero {
+    margin-bottom: 40px;
+    padding: 0 16px;
+  }
+
+  .domain-hero h1 {
+    font-size: 2.2rem;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  .domain-hero p {
+    font-size: 1rem;
+    padding: 0 8px;
+  }
+  
+  .domains-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
+  
+  .domain-card {
+    padding: 20px;
+    margin-bottom: 8px;
+  }
+
+  .domain-icon {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+  }
+
+  .domain-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+
+  .domain-card > p {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .skills h4,
+  .career-paths h4,
+  .salary h4 {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+
+  .skill-tags {
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .skill-tag {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .career-info {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .career-paths li {
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+  }
+  
+  .salary {
+    text-align: left;
+  }
+
+  .salary-amount {
+    font-size: 1rem;
+  }
+  
+  .back-btn {
+    position: static;
+    margin-bottom: 20px;
+    display: inline-block;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* Experience grid mobile */
+  .experience-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
+
+  .experience-card {
+    padding: 24px 20px;
+  }
+
+  .experience-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+  }
+
+  .experience-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .experience-card p {
+    font-size: 0.9rem;
+  }
+
+  .experience-details {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .experience-details > div {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Touch improvements */
+  .domain-card,
+  .experience-card {
+    min-height: 44px; /* Minimum touch target */
+    touch-action: manipulation;
+  }
+
+  .domain-card:hover,
+  .experience-card:hover {
+    transform: none; /* Disable hover transforms on mobile */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .domain-card:active,
+  .experience-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .domain-selection-page {
+    padding: 40px 0 20px;
+  }
+
+  .domain-hero h1 {
+    font-size: 1.8rem;
+  }
+
+  .domain-hero p {
+    font-size: 0.9rem;
+  }
+
+  .domains-grid,
+  .experience-grid {
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .domain-card,
+  .experience-card {
+    padding: 16px;
+  }
+
+  .domain-icon {
+    font-size: 2rem;
+  }
+
+  .domain-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .experience-icon {
+    font-size: 2.5rem;
+  }
+
+  .skill-tags {
+    gap: 4px;
+  }
+
+  .skill-tag {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+  .back-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Landscape mobile orientation */
+@media (max-width: 768px) and (orientation: landscape) {
+  .domain-selection-page {
+    padding: 40px 0 20px;
+  }
+
+  .domain-hero {
+    margin-bottom: 30px;
+  }
+
+  .domain-hero h1 {
+    font-size: 2rem;
+  }
+
+  .domains-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .experience-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
   .domain-card,
   .experience-card {
     padding: 16px;

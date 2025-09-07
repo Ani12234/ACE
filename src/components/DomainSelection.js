@@ -6,6 +6,7 @@ const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
   const [step, setStep] = useState(1); // 1: domain selection, 2: experience level
   const modalRef = useRef(null);
   const cardsRef = useRef([]);
+  const animationsRef = useRef([]);
 
   const domains = [
     {
@@ -100,39 +101,80 @@ const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
   ];
 
   useEffect(() => {
-    if (isOpen && modalRef.current) {
-      // Animate modal entrance
-      gsap.fromTo(modalRef.current, 
-        { opacity: 0, scale: 0.8 }, 
-        { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.7)' }
-      );
+    // Clean up previous animations
+    animationsRef.current.forEach(animation => {
+      if (animation && typeof animation.kill === 'function') {
+        animation.kill();
+      }
+    });
+    animationsRef.current = [];
 
-      // Animate cards
+    if (isOpen && modalRef.current) {
+      // Validate element before animating
+      const validateElement = (element) => {
+        return element && 
+               element.parentNode && 
+               element.isConnected && 
+               document.contains(element);
+      };
+
+      if (validateElement(modalRef.current)) {
+        // Animate modal entrance
+        const modalAnim = gsap.fromTo(modalRef.current, 
+          { opacity: 0, scale: 0.8 }, 
+          { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.7)' }
+        );
+        animationsRef.current.push(modalAnim);
+      }
+
+      // Animate cards with validation
       setTimeout(() => {
-        if (cardsRef.current.length > 0) {
-          gsap.fromTo(cardsRef.current, 
+        const validCards = cardsRef.current.filter(card => validateElement(card));
+        
+        if (validCards.length > 0) {
+          const cardsAnim = gsap.fromTo(validCards, 
             { y: 50, opacity: 0, rotateY: -15 }, 
             { y: 0, opacity: 1, rotateY: 0, duration: 0.6, stagger: 0.1, ease: 'back.out(1.2)' }
           );
+          animationsRef.current.push(cardsAnim);
         }
       }, 200);
     }
+
+    // Cleanup function
+    return () => {
+      animationsRef.current.forEach(animation => {
+        if (animation && typeof animation.kill === 'function') {
+          animation.kill();
+        }
+      });
+      animationsRef.current = [];
+    };
   }, [isOpen, step]);
 
   const handleDomainSelect = (domain) => {
     setSelectedDomain(domain);
     
-    // Animate selection
+    // Validate element before animating
+    const validateElement = (element) => {
+      return element && 
+             element.parentNode && 
+             element.isConnected && 
+             document.contains(element);
+    };
+    
+    // Animate selection with validation
     const selectedCard = cardsRef.current.find(card => 
-      card && card.dataset.domainId === domain.id
+      card && card.dataset && card.dataset.domainId === domain.id
     );
     
-    if (selectedCard) {
-      gsap.to(selectedCard, {
+    if (selectedCard && validateElement(selectedCard)) {
+      const selectAnim = gsap.to(selectedCard, {
         scale: 1.05,
         boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)',
         duration: 0.3
       });
+      animationsRef.current.push(selectAnim);
     }
     
     setTimeout(() => setStep(2), 500);
