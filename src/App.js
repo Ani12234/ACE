@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import './App.css';
 
@@ -40,12 +40,40 @@ function AppContent() {
   };
 
   const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+    const newState = !mobileMenuOpen;
+    setMobileMenuOpen(newState);
+    
+    // Prevent body scroll when mobile menu is open
+    if (newState) {
+      document.body.classList.add('mobile-menu-open');
+    } else {
+      document.body.classList.remove('mobile-menu-open');
+    }
   };
 
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
+    document.body.classList.remove('mobile-menu-open');
   };
+
+  // Cleanup body class on component unmount
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove('mobile-menu-open');
+    };
+  }, []);
+
+  // Close mobile menu on window resize to desktop size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768 && mobileMenuOpen) {
+        closeMobileMenu();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mobileMenuOpen]);
 
   return (
     <div className="app-shell">
@@ -65,6 +93,15 @@ function AppContent() {
           </button>
           
           <nav className={`header-nav ${mobileMenuOpen ? 'open' : ''}`} aria-label="Primary">
+            {mobileMenuOpen && (
+              <button 
+                className="mobile-menu-close"
+                onClick={closeMobileMenu}
+                aria-label="Close mobile menu"
+              >
+                ✕
+              </button>
+            )}
             {isAuthenticated ? (
               <>
                 <Link to="/" className="nav-link" onClick={closeMobileMenu}>Home</Link>
