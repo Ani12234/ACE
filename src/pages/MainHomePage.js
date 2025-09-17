@@ -7,7 +7,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 function MainHomePage() {
   const [user] = useState({ name: 'John Doe', level: 'Intermediate', streak: 7 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Set to false to show content immediately
   const dashboardRef = useRef(null);
   const animationsRef = useRef([]);
   const timeoutRef = useRef(null);

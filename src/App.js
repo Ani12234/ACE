@@ -125,25 +125,29 @@ function AppContent() {
       </header>
       <main className="app-main">
         <Routes>
-          <Route path="/" element={isAuthenticated ? getAuthenticatedRoute() : <Home />} />
+          {/* Public routes */}
+          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+          <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />} />
+          
+          {/* Protected routes - require authentication */}
+          <Route path="/dashboard" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
           <Route path="/about" element={isAuthenticated ? <About /> : <Navigate to="/login" replace />} />
           <Route path="/features" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
           <Route path="/interview-practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
-          <Route path="/dashboard" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-          <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />} />
           <Route path="/domain-selection" element={isAuthenticated ? <DomainSelectionPage /> : <Navigate to="/login" replace />} />
           <Route path="/course-recommendations" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
           <Route path="/course-detail/:courseId" element={isAuthenticated ? <CourseDetail /> : <Navigate to="/login" replace />} />
-          {/* Placeholder routes for future pages */}
-          <Route path="/courses" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/assessment" element={<Navigate to="/interview-practice" replace />} />
-          <Route path="/career-guidance" element={<Navigate to="/features" replace />} />
-          <Route path="/certificates" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/all-courses" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/practice" element={<Navigate to="/interview-practice" replace />} />
-          <Route path="/interview" element={<Navigate to="/interview-practice" replace />} />
-          <Route path="/progress" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Direct routes for main sections */}
+          <Route path="/courses" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
+          <Route path="/assessment" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/career-guidance" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
+          <Route path="/certificates" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
+          <Route path="/all-courses" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
+          <Route path="/practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/interview" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/progress" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

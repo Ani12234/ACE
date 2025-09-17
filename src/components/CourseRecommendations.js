@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
+import { Link } from 'react-router-dom';
 
+// Main component function
+function CourseRecommendationsSimple() {
+  const [selectedDomain, setSelectedDomain] = useState('web-development');
+  const [selectedLevel, setSelectedLevel] = useState('beginner');
+  
+  // Get courses based on selected domain and level
+  const getCourses = () => {
+    return courseDatabase[selectedDomain]?.[selectedLevel] || [];
+  };
+  
+  // This component is simplified and will be replaced by the more advanced CourseRecommendations component below
+  return null;
+}
+
+// Keep only one export at the end of the file
 const courseDatabase = {
   'web-development': {
     beginner: [
