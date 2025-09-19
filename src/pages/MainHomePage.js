@@ -42,6 +42,31 @@ function MainHomePage() {
 
         // Simulate loading time for professional feel
         setTimeout(() => setIsLoading(false), 800);
+        
+        // Add scroll reveal animations for dashboard sections
+        const sections = dashboardRef.current.querySelectorAll('.dashboard-card, .stat-card, .learning-path-item');
+        sections.forEach((section, index) => {
+          gsap.fromTo(section, 
+            { 
+              y: 50, 
+              opacity: 0,
+              scale: 0.95
+            }, 
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.8,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: section,
+                start: "top 85%",
+                toggleActions: "play none none none"
+              },
+              delay: index * 0.1
+            }
+          );
+        });
 
         // Wait for DOM to be fully rendered
         timeoutRef.current = setTimeout(() => {

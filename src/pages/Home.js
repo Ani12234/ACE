@@ -42,6 +42,56 @@ function Home() {
       { y: isMobile ? 20 : 30, opacity: 0 },
       { y: 0, opacity: 1, duration: isMobile ? 0.6 : 0.9, stagger: isMobile ? 0.08 : 0.12 }
     );
+    
+    // Add scroll reveal animations for sections
+    sectionsRef.current.forEach((section, index) => {
+      gsap.fromTo(
+        section,
+        { 
+          y: 60, 
+          opacity: 0,
+          scale: 0.92
+        },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.9,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: section,
+            start: "top 80%",
+            toggleActions: "play none none none"
+          }
+        }
+      );
+    });
+    
+    // Add staggered reveal for cards
+    cardsRef.current.forEach((card) => {
+      gsap.fromTo(
+        card,
+        { 
+          y: 40, 
+          opacity: 0,
+          rotateY: -5,
+          scale: 0.95
+        },
+        {
+          y: 0,
+          opacity: 1,
+          rotateY: 0,
+          scale: 1,
+          duration: 0.7,
+          ease: "back.out(1.2)",
+          scrollTrigger: {
+            trigger: card,
+            start: "top 85%",
+            toggleActions: "play none none none"
+          }
+        }
+      );
+    });
 
     // Hero mock animations - reduced for mobile performance
     if (heroMock && !prefersReducedMotion) {
