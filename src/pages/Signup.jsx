@@ -60,6 +60,21 @@ function Signup() {
     }, 1000);
   };
 
+  // Google Sign-Up handler (uses Firebase Google popup via AuthContext)
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true);
+      await login();
+      // After Google sign-in, send user to dashboard directly
+      navigate('/dashboard');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Google sign-up failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="authWrap">
@@ -111,6 +126,15 @@ function Signup() {
               disabled={isLoading}
             >
               {isLoading ? 'Creating account...' : 'Sign up'}
+            </button>
+            <button
+              type="button"
+              className="btn btnSecondary"
+              onClick={handleGoogleSignup}
+              disabled={isLoading}
+              style={{ marginLeft: '12px' }}
+            >
+              {isLoading ? 'Connecting...' : 'Sign up with Google'}
             </button>
             <Link to="/login" className="link">I already have an account</Link>
           </div>

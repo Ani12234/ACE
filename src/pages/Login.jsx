@@ -23,14 +23,13 @@ function Login() {
   useEffect(() => {
     // Validate element before animating
     const validateElement = (element) => {
-      return element && 
-             element.parentNode && 
-             element.isConnected && 
-             document.contains(element);
+      return (
+        element && element.parentNode && element.isConnected && document.contains(element)
+      );
     };
 
     // Clean up previous animations
-    animationsRef.current.forEach(animation => {
+    animationsRef.current.forEach((animation) => {
       if (animation && typeof animation.kill === 'function') {
         animation.kill();
       }
@@ -40,32 +39,34 @@ function Login() {
     const card = cardRef.current;
     if (validateElement(card)) {
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      
-      const mainAnim = tl.fromTo(card, 
-        { y: 24, opacity: 0, rotateX: -6 }, 
+
+      const mainAnim = tl.fromTo(
+        card,
+        { y: 24, opacity: 0, rotateX: -6 },
         { y: 0, opacity: 1, rotateX: 0, duration: 0.7 }
       );
-      
+
       // Validate stagger elements before animating
       const staggerElements = card.querySelectorAll('[data-stagger]');
       const validStaggerElements = Array.from(staggerElements).filter(validateElement);
-      
+
       if (validStaggerElements.length > 0) {
-        const staggerAnim = tl.fromTo(validStaggerElements, 
-          { y: 16, opacity: 0 }, 
-          { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 }, 
+        const staggerAnim = tl.fromTo(
+          validStaggerElements,
+          { y: 16, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, stagger: 0.08 },
           '<0.05'
         );
         animationsRef.current.push(staggerAnim);
       }
-      
+
       animationsRef.current.push(mainAnim);
     }
 
     // ScrollTrigger for below-the-fold feature items with validation
     const featureItems = document.querySelectorAll('[data-feature-item]');
     const validFeatureItems = Array.from(featureItems).filter(validateElement);
-    
+
     validFeatureItems.forEach((el) => {
       if (validateElement(el)) {
         const scrollAnim = gsap.fromTo(
@@ -79,8 +80,8 @@ function Login() {
             scrollTrigger: {
               trigger: el,
               start: 'top 85%',
-              toggleActions: 'play none none reverse'
-            }
+              toggleActions: 'play none none reverse',
+            },
           }
         );
         animationsRef.current.push(scrollAnim);
@@ -89,15 +90,15 @@ function Login() {
 
     // Cleanup function
     return () => {
-      animationsRef.current.forEach(animation => {
+      animationsRef.current.forEach((animation) => {
         if (animation && typeof animation.kill === 'function') {
           animation.kill();
         }
       });
       animationsRef.current = [];
-      
+
       // Clean up ScrollTrigger instances
-      ScrollTrigger.getAll().forEach(trigger => {
+      ScrollTrigger.getAll().forEach((trigger) => {
         if (trigger && typeof trigger.kill === 'function') {
           trigger.kill();
         }
@@ -133,6 +134,26 @@ function Login() {
       
       setIsLoading(false);
     }, 1000);
+  };
+
+  // Google Sign-In handler
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true);
+      await login();
+
+      const existingDomainSelection = localStorage.getItem('userDomainSelection');
+      if (existingDomainSelection) {
+        navigate('/dashboard');
+      } else {
+        setShowDomainSelection(true);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Google sign-in failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDomainSelect = (domainData) => {
@@ -221,6 +242,15 @@ function Login() {
                     disabled={isLoading}
                   >
                     {isLoading ? 'Signing In...' : 'Sign In'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btnSecondary btn-large"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                    style={{ marginLeft: '12px' }}
+                  >
+                    {isLoading ? 'Connecting...' : 'Continue with Google'}
                   </button>
                   
                   <div className="form-links">

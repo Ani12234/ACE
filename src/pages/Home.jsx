@@ -365,35 +365,38 @@ function Home() {
       });
     }
 
-    // Progress bar animation - mobile optimized
-    ScrollTrigger.create({
-      trigger: '.statCard',
-      start: isMobile ? 'top 90%' : 'top 80%',
-      onEnter: () => {
-        const progressBar = document.createElement('div');
-        progressBar.style.cssText = `
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          height: 3px;
-          background: var(--gradient);
-          border-radius: 0 0 14px 14px;
-          width: 0%;
-        `;
-        
-        const statCard = document.querySelector('.statCard');
-        if (statCard && !statCard.querySelector('div[style*="position: absolute"]')) {
-          statCard.style.position = 'relative';
-          statCard.appendChild(progressBar);
-          
-          gsap.to(progressBar, {
-            width: '100%',
-            duration: isMobile ? 1.5 : 2,
-            ease: 'power2.out'
-          });
+    // Progress bar animation - mobile optimized (only if element exists)
+    const statCardEl = document.querySelector('.statCard');
+    if (statCardEl) {
+      ScrollTrigger.create({
+        trigger: statCardEl,
+        start: isMobile ? 'top 90%' : 'top 80%',
+        onEnter: () => {
+          const progressBar = document.createElement('div');
+          progressBar.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--gradient);
+            border-radius: 0 0 14px 14px;
+            width: 0%;
+          `;
+
+          const statCard = statCardEl;
+          if (statCard && !statCard.querySelector('div[style*="position: absolute"][style*="height: 3px"]')) {
+            statCard.style.position = 'relative';
+            statCard.appendChild(progressBar);
+
+            gsap.to(progressBar, {
+              width: '100%',
+              duration: isMobile ? 1.5 : 2,
+              ease: 'power2.out'
+            });
+          }
         }
-      }
-    });
+      });
+    }
 
     // Handle orientation change on mobile
     const handleOrientationChange = () => {
@@ -547,7 +550,6 @@ function Home() {
               style={{
                 width: '100%',
                 aspectRatio: '16/9',
-                background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 borderRadius: '16px',
                 overflow: 'hidden',
