@@ -25,6 +25,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'ace-server' })
 })
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'ace-server', docs: ['/health', '/api/me'] })
+})
+
 // Protected routes mounted under /api
 app.use('/api', protectedRoutes)
 
