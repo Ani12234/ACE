@@ -9,6 +9,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true
+      },
+      '/interview': {
+        target: 'http://localhost:4100',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/interview/, '/api')
       }
     }
   },
