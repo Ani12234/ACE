@@ -14,6 +14,8 @@ import Footer from './components/Footer';
 import DomainSelectionPage from './pages/DomainSelectionPage';
 import CourseRecommendations from './components/CourseRecommendations';
 import CourseDetail from './components/CourseDetail';
+import Dashboard from './pages/Dashboard';
+import AdminRag from './pages/AdminRag';
 
 function AppContent() {
   const { isAuthenticated, logout } = useAuth();
@@ -131,13 +133,14 @@ function AppContent() {
           <Route path="/signup" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />} />
           
           {/* Protected routes - require authentication */}
-          <Route path="/dashboard" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
+          <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
           <Route path="/about" element={isAuthenticated ? <About /> : <Navigate to="/login" replace />} />
           <Route path="/features" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
           <Route path="/interview-practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
           <Route path="/domain-selection" element={isAuthenticated ? <DomainSelectionPage /> : <Navigate to="/login" replace />} />
           <Route path="/course-recommendations" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
           <Route path="/course-detail/:courseId" element={isAuthenticated ? <CourseDetail /> : <Navigate to="/login" replace />} />
+          <Route path="/admin-rag" element={isAuthenticated ? <AdminRag /> : <Navigate to="/login" replace />} />
           
           {/* Direct routes for main sections */}
           <Route path="/courses" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />

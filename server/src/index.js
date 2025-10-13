@@ -25,20 +25,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'ace-server' })
 })
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', service: 'ace-server', docs: ['/health', '/api/me'] })
-})
-
-// Protected routes mounted under /api
+// API routes
 app.use('/api', protectedRoutes)
 
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || 4100
+
 // Only start a local server outside Vercel serverless
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
-    console.log(`Server listening on http://localhost:${PORT}`)
+    console.log(`ACE Server listening on http://localhost:${PORT}`)
   })
 }
 

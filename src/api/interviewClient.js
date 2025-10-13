@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_INTERVIEW_API_BASE_URL || '/interview'
+// Now served by the main server under /api/interview
+const baseURL = import.meta.env.VITE_INTERVIEW_API_BASE_URL || '/api/interview'
 const interviewApi = axios.create({ baseURL })
 
 interviewApi.interceptors.request.use((config) => {

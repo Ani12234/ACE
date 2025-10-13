@@ -1,7 +1,7 @@
 import interviewClient from './interviewClient'
 
-export async function startInterview({ candidateEmail, domain }) {
-  const res = await interviewClient.post('/start', { candidateEmail, domain })
+export async function startInterview({ candidateEmail, domainId }) {
+  const res = await interviewClient.post('/start', { candidateEmail, domainId })
   // { sessionId, firstQ }
   return res.data
 }

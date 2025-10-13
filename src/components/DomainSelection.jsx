@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
+import api from '../api/client';
 
 const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
   const [selectedDomain, setSelectedDomain] = useState(null);
@@ -8,70 +9,9 @@ const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
   const cardsRef = useRef([]);
   const animationsRef = useRef([]);
 
-  const domains = [
-    {
-      id: 'web-development',
-      title: 'Web Development',
-      description: 'Build modern, responsive websites and web applications using HTML, CSS, JavaScript, and popular frameworks like React.',
-      icon: '🌐',
-      color: '#3b82f6',
-      skills: ['HTML/CSS', 'JavaScript', 'React', 'Node.js'],
-      careerPaths: ['Frontend Developer', 'UI/UX Developer', 'Web Designer'],
-      averageSalary: '$75,000'
-    },
-    {
-      id: 'machine-learning',
-      title: 'Machine Learning',
-      description: 'Dive into AI and data science. Learn algorithms, neural networks, and build intelligent systems that can learn and make predictions.',
-      icon: '🤖',
-      color: '#10b981',
-      skills: ['Python', 'TensorFlow', 'Statistics', 'Data Analysis'],
-      careerPaths: ['ML Engineer', 'Data Scientist', 'AI Researcher'],
-      averageSalary: '$120,000'
-    },
-    {
-      id: 'backend-development',
-      title: 'Backend Development',
-      description: 'Master server-side programming, databases, APIs, and cloud infrastructure. Build the backbone that powers web applications.',
-      icon: '⚙️',
-      color: '#8b5cf6',
-      skills: ['Node.js', 'Databases', 'APIs', 'Cloud Services'],
-      careerPaths: ['Backend Developer', 'DevOps Engineer', 'System Architect'],
-      averageSalary: '$95,000'
-    },
-    {
-      id: 'fullstack-development',
-      title: 'Full Stack Development',
-      description: 'Become a complete developer mastering both frontend and backend technologies. Build end-to-end web applications.',
-      icon: '🚀',
-      color: '#f59e0b',
-      skills: ['Frontend', 'Backend', 'Databases', 'DevOps'],
-      careerPaths: ['Full Stack Developer', 'Technical Lead', 'Product Engineer'],
-      averageSalary: '$110,000'
-    },
-    {
-      id: 'data-science',
-      title: 'Data Science',
-      description: 'Extract insights from data and make data-driven decisions',
-      icon: '📊',
-      color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      skills: ['Python/R', 'Statistics', 'Data Visualization', 'SQL', 'Business Intelligence'],
-      careerPaths: ['Data Scientist', 'Data Analyst', 'Business Intelligence Developer'],
-      averageSalary: '$90,000 - $135,000',
-      jobDemand: 'High'
-    },
-    {
-      id: 'cybersecurity',
-      title: 'Cybersecurity',
-      description: 'Protect systems and data from digital threats and attacks',
-      icon: '🔒',
-      color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-      skills: ['Network Security', 'Ethical Hacking', 'Risk Assessment', 'Compliance', 'Incident Response'],
-      careerPaths: ['Security Analyst', 'Penetration Tester', 'Security Architect'],
-      averageSalary: '$85,000 - $140,000',
-      jobDemand: 'Very High'
-    }
-  ];
+  const [domains, setDomains] = useState([]);
+  const [loadingDomains, setLoadingDomains] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const experienceLevels = [
     {
@@ -110,6 +50,40 @@ const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
     animationsRef.current = [];
 
     if (isOpen && modalRef.current) {
+      (async () => {
+        try {
+          setLoadingDomains(true);
+          setLoadError('');
+          const res = await api.get('/rag/domains');
+          // Backend returns { domains: [...] }
+          const payload = res?.data;
+          const serverDomains = Array.isArray(payload?.domains)
+            ? payload.domains
+            : (Array.isArray(payload) ? payload : []);
+          if (serverDomains.length) {
+            setDomains(serverDomains.map((d) => {
+              const id = d?.id || d;
+              const title = d?.title || String(id).toUpperCase();
+              return {
+                id,
+                title,
+                description: `Interview questions about ${id}`,
+                icon: '📚',
+                color: '#3b82f6',
+                skills: [],
+                careerPaths: [],
+                averageSalary: '',
+                jobDemand: ''
+              };
+            }));
+          }
+        } catch (e) {
+          setLoadError('Failed to load domains from server');
+        } finally {
+          setLoadingDomains(false);
+        }
+      })();
+
       // Validate element before animating
       const validateElement = (element) => {
         return element && 
@@ -211,6 +185,17 @@ const DomainSelection = ({ isOpen, onClose, onDomainSelect }) => {
             </div>
 
             <div className="domains-grid">
+              {loadingDomains && (
+                <div style={{ padding: 12, color: '#666' }}>Loading domains…</div>
+              )}
+              {loadError && (
+                <div style={{ padding: 12, color: 'crimson' }}>{loadError}</div>
+              )}
+              {!loadingDomains && !loadError && domains.length === 0 && (
+                <div style={{ padding: 12, color: '#666' }}>
+                  No domains available. Ask the admin to upload documents to the server (llamaindex) so they appear here.
+                </div>
+              )}
               {domains.map((domain, index) => (
                 <div
                   key={domain.id}

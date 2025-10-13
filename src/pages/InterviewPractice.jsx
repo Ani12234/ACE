@@ -4,24 +4,41 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { startInterview as apiStart, submitAnswer as apiSubmit } from '../api/interview';
 import ProctorCamera from '../components/ProctorCamera';
+import DomainSelection from '../components/DomainSelection';
+import interviewClient from '../api/interviewClient';
+import api from '../api/client';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function InterviewPractice() {
+  // Config: duration to listen per question before auto-submitting
+  const ANSWER_WINDOW_MS = 25000; // 25 seconds per question
+  const ANSWER_GRACE_MS = 1500;   // small grace before auto-restart or submit
   const heroRef = useRef(null);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   // Backend-driven state
   const [sessionId, setSessionId] = useState(null);
   const [currentQObj, setCurrentQObj] = useState(null); // { id, text }
   const [candidateText, setCandidateText] = useState('');
-  const [progress, setProgress] = useState(null); // { index, total }
+  const [progress, setProgress] = useState(null); // { current, total }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [lastFeedback, setLastFeedback] = useState('');
   const [proctorStatus, setProctorStatus] = useState(null); // { ok, matchScore, multipleFaces, lookingAway, headPose, facesCount }
+  const [events, setEvents] = useState([]); // malpractice events
+  const qaRef = useRef([]); // accumulate { q, a }
+  const [finalReport, setFinalReport] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [showDomainSelection, setShowDomainSelection] = useState(false);
   // Voice: Speech-to-Text (browser Web Speech API) and Text-to-Speech
   const recognitionRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const candidateTextRef = useRef('');
+  const answerTimerRef = useRef(null);
+  const lastProctorRef = useRef({ facesCount: null, multipleFaces: null, lookingAway: null });
   const [sttSupported] = useState(() => {
     return typeof window !== 'undefined' && (
       'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
@@ -63,7 +80,11 @@ function InterviewPractice() {
     };
   }, []);
 
-  // Speak the current question aloud when it changes
+  // Speak the current question aloud when it changes, then auto-start listening
+  useEffect(() => {
+    candidateTextRef.current = candidateText;
+  }, [candidateText]);
+
   useEffect(() => {
     const text = currentQObj?.text;
     if (!text) return;
@@ -73,20 +94,44 @@ function InterviewPractice() {
         const utter = new SpeechSynthesisUtterance(text);
         utter.rate = 1.0;
         utter.pitch = 1.0;
+        utter.onend = () => {
+          // Only start listening when not submitting to avoid overlap
+          if (!isSubmittingRef.current) startListening();
+        };
         window.speechSynthesis.speak(utter);
       }
     } catch {}
   }, [currentQObj?.text]);
+
+  // Watch proctor status and raise events for dashboard/deductions
+  useEffect(() => {
+    if (!proctorStatus) return;
+    try {
+      const prev = lastProctorRef.current || {};
+      const now = proctorStatus;
+      if (typeof now.facesCount === 'number') {
+        if (now.facesCount === 0 && prev.facesCount !== 0) logEvent('no-face');
+        if (now.facesCount > 1 && prev.facesCount !== now.facesCount) logEvent('multiple-faces', { count: now.facesCount });
+      }
+      if (typeof now.lookingAway === 'boolean' && now.lookingAway && !prev.lookingAway) logEvent('looking-away');
+      lastProctorRef.current = { facesCount: now.facesCount, multipleFaces: now.multipleFaces, lookingAway: now.lookingAway };
+    } catch {}
+  }, [proctorStatus]);
 
   const startListening = () => {
     if (!sttSupported || isRecording) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     recognitionRef.current = rec;
-    rec.continuous = true;
+    rec.continuous = false; // fixed window per answer improves stability
     rec.interimResults = true;
     rec.lang = 'en-US';
     let finalText = '';
+    // Clear any previous answer window timer
+    if (answerTimerRef.current) {
+      clearTimeout(answerTimerRef.current);
+      answerTimerRef.current = null;
+    }
     rec.onresult = (e) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; ++i) {
@@ -94,21 +139,43 @@ function InterviewPractice() {
         if (e.results[i].isFinal) finalText += t + ' ';
         else interim += t;
       }
-      // Show combined interim + final in the textarea for live feedback
-      setCandidateText((prev) => {
-        // If empty or we are still dictating, prefer live stream content
-        const base = finalText.trim();
-        return base ? base + (interim ? (' ' + interim) : '') : (prev || interim);
-      });
+      const base = finalText.trim();
+      const combined = base ? base + (interim ? (' ' + interim) : '') : (candidateTextRef.current || interim);
+      candidateTextRef.current = combined;
+      setCandidateText(combined);
     };
     rec.onerror = () => {
       setIsRecording(false);
+      // attempt a quick restart to keep hands-free
+      if (!isSubmittingRef.current) setTimeout(() => startListening(), 300);
     };
     rec.onend = () => {
       setIsRecording(false);
+      // Clear timer if it hasn't fired
+      if (answerTimerRef.current) {
+        clearTimeout(answerTimerRef.current);
+        answerTimerRef.current = null;
+      }
+      // Auto-advance when user stops speaking and we have content
+      if (!isSubmittingRef.current) {
+        if ((candidateTextRef.current || '').trim().length > 0) {
+          nextQuestion();
+        } else {
+          // restart listening to encourage answer
+          setTimeout(() => startListening(), 300);
+        }
+      }
     };
     rec.start();
     setIsRecording(true);
+    // Schedule auto-stop and submit after the fixed answer window
+    answerTimerRef.current = setTimeout(() => {
+      if (!isSubmittingRef.current) {
+        try { stopListening(); } catch {}
+        // If user said nothing, still advance per auto policy
+        nextQuestion();
+      }
+    }, ANSWER_WINDOW_MS + ANSWER_GRACE_MS);
   };
 
   const stopListening = () => {
@@ -119,57 +186,108 @@ function InterviewPractice() {
     setIsRecording(false);
   };
 
+  const beginInterviewWithDomain = async (domainId) => {
+    // Using stored user email if available
+    const userRaw = localStorage.getItem('user');
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    const candidateEmail = user?.email || 'candidate@example.com';
+    const { sessionId: sid, firstQ } = await apiStart({ candidateEmail, domainId });
+    if (!sid || !firstQ) throw new Error('Invalid response from server');
+    const fq = typeof firstQ === 'string' ? { id: 'q1', text: firstQ } : firstQ;
+    setSessionId(sid);
+    setCurrentQObj({ id: fq.id || 'q1', text: fq.text || '' });
+    setCandidateText('');
+    setProgress({ current: 0, total: 6 });
+    setIsInterviewActive(true);
+    setCurrentQuestion(0); // keep local progress bar working
+    qaRef.current = [];
+    setEvents([]);
+    // Attach malpractice listeners
+    const onBlur = () => logEvent('tab-switch');
+    const onVis = () => { if (document.visibilityState !== 'visible') logEvent('tab-hidden'); };
+    const onFs = () => { if (!document.fullscreenElement) logEvent('exit-fullscreen'); };
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVis);
+    document.addEventListener('fullscreenchange', onFs);
+    // Save detach for endInterview
+    detachListenersRef.current = () => {
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVis);
+      document.removeEventListener('fullscreenchange', onFs);
+    };
+  };
+
   const startInterview = async () => {
     setError('');
     setLastFeedback('');
     setLoading(true);
     try {
-      // Using interviewType as a stand-in for domain selection.
-      const domain = interviewType;
-      const candidateEmail = 'candidate@example.com'; // TODO: replace with logged-in user email if available
-      const { sessionId: sid, firstQ } = await apiStart({ candidateEmail, domain });
-      if (!sid || !firstQ) throw new Error('Invalid response from server');
-      setSessionId(sid);
-      setCurrentQObj(firstQ);
-      setCandidateText('');
-      setProgress({ index: 0, total: 10 });
-      setIsInterviewActive(true);
-      setCurrentQuestion(0); // keep local progress bar working
+      // Enter full screen
+      try {
+        const el = document.documentElement;
+        if (el.requestFullscreen) await el.requestFullscreen();
+      } catch {}
+      // Always open domain selection to pick domain for this session
+      setShowDomainSelection(true);
+      setLoading(false);
+      return;
     } catch (e) {
       setError('Failed to start interview. Please check the interview server.');
       console.error(e);
     } finally {
-      setLoading(false);
+      // loading is already turned off when modal opens
     }
   };
 
   const nextQuestion = async () => {
     // If using backend, submit answer and fetch next question
     if (sessionId && currentQObj?.id) {
+      isSubmittingRef.current = true;
+      // ensure mic is off during submit to avoid overlap
+      try { stopListening(); } catch {}
+      // Clear any pending timer for previous question
+      if (answerTimerRef.current) {
+        clearTimeout(answerTimerRef.current);
+        answerTimerRef.current = null;
+      }
       setLoading(true);
       setError('');
       try {
-        const { nextQuestion: nextQ, progress: p, feedback } = await apiSubmit({
+        const trimmedAnswer = (candidateText ?? '').trim();
+        const payloadAnswer = trimmedAnswer.length ? trimmedAnswer : '(no answer)';
+        const serverRes = await apiSubmit({
           sessionId,
           questionId: currentQObj.id,
-          candidateText,
+          candidateText: payloadAnswer,
         });
+        const nextQ = serverRes?.nextQuestion ?? serverRes?.question ?? serverRes?.questionText;
+        const p = serverRes?.progress;
+        const feedback = serverRes?.feedback;
+        // accumulate Q/A
+        qaRef.current.push({ q: currentQObj.text, a: payloadAnswer });
         // Update UI
         if (p) setProgress(p);
-        setLastFeedback(feedback || '');
+        let fbText = '';
+        if (typeof feedback === 'string') fbText = feedback;
+        else if (feedback && typeof feedback === 'object') fbText = feedback.summary || JSON.stringify(feedback);
+        setLastFeedback(fbText);
         setCandidateText('');
-        if (nextQ && nextQ.id) {
-          setCurrentQObj(nextQ);
+        if (nextQ) {
+          const qObj = typeof nextQ === 'string' ? { id: `q${(p?.current ?? currentQuestion)+1}`, text: nextQ } : nextQ;
+          setCurrentQObj({ id: qObj.id || `q${(p?.current ?? currentQuestion)+1}`, text: qObj.text || '' });
           // keep legacy progress bar moving
           setCurrentQuestion((prev) => prev + 1);
+          // restart listening for the next answer after UI updates
+          setTimeout(() => { if (!isRecording) startListening(); }, 250);
         } else {
           // No next question: end interview
-          setIsInterviewActive(false);
+          endInterview();
         }
       } catch (e) {
         setError('Failed to submit answer. Please try again.');
         console.error(e);
       } finally {
+        isSubmittingRef.current = false;
         setLoading(false);
       }
       return;
@@ -182,18 +300,239 @@ function InterviewPractice() {
     }
   };
 
-  const endInterview = () => {
-    setIsInterviewActive(false);
-    setSessionId(null);
-    setCurrentQObj(null);
-    setCandidateText('');
-    setProgress(null);
-    setLoading(false);
-    setError('');
+  const detachListenersRef = useRef(() => {});
+  const endInterview = async () => {
+    try {
+      // stop mic and mark submitting
+      try { stopListening(); } catch {}
+      isSubmittingRef.current = true;
+      setFinalizing(true);
+      if (answerTimerRef.current) {
+        clearTimeout(answerTimerRef.current);
+        answerTimerRef.current = null;
+      }
+
+      // Final scoring (canonical)
+      let finalReportLocal = null;
+      if (sessionId) {
+        try {
+          // Add timeout to prevent indefinite hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+          const { data } = await api.post('/scoring/final', {
+            sessionId,
+            qa: qaRef.current.map(x => ({ question: x.q, answer: x.a })),
+            proctor: {
+              integrity: proctorStatus?.matchScore ?? null,
+              stats: proctorStatus,
+              events,
+            },
+          }, { signal: controller.signal });
+
+          clearTimeout(timeoutId);
+          if (data?.report) {
+            setFinalReport(data.report);
+            finalReportLocal = data.report;
+            setShowReport(true);
+          }
+        } catch (e) {
+          console.warn('scoring/final failed', e?.message || e);
+          // Show a fallback report if scoring fails
+          finalReportLocal = {
+            overall_score_100: 70,
+            overall_score_10: 7,
+            strengths: ['Completed interview'],
+            weaknesses: ['Scoring timeout - review answers manually'],
+            improvements: ['Ensure backend is running and network is stable'],
+          };
+          setFinalReport(finalReportLocal);
+          setShowReport(true);
+        }
+      }
+      // Save report locally
+      // gather domain selection metadata if available
+      let domainMeta = null;
+      try {
+        const selectionRaw = localStorage.getItem('userDomainSelection');
+        domainMeta = selectionRaw ? JSON.parse(selectionRaw) : null;
+      } catch {}
+
+      const report = {
+        id: `${Date.now()}`,
+        sessionId: sessionId || null,
+        startedAt: Date.now(),
+        finishedAt: Date.now(),
+        qa: qaRef.current.slice(),
+        events,
+        proctorLast: proctorStatus,
+        interviewType,
+        difficulty,
+        domain: domainMeta?.domain || null,
+        overallScore100: finalReportLocal?.overall_score_100 ?? (typeof finalReportLocal?.overall_score_10 === 'number' ? Math.round(finalReportLocal.overall_score_10 * 10) : 70),
+        strengths: finalReportLocal?.strengths || null,
+        weaknesses: finalReportLocal?.weaknesses || null,
+        improvements: finalReportLocal?.improvements || null,
+      };
+      try {
+        const key = 'interviewReports';
+        const arr = JSON.parse(localStorage.getItem(key) || '[]');
+        arr.push(report);
+        localStorage.setItem(key, JSON.stringify(arr));
+      } catch {}
+    } finally {
+      isSubmittingRef.current = false;
+      setFinalizing(false);
+      // cleanup state
+      setIsInterviewActive(false);
+      setSessionId(null);
+      setCurrentQObj(null);
+      setCandidateText('');
+      setProgress(null);
+      setLoading(false);
+      setError('');
+      // detach listeners
+      try { detachListenersRef.current(); } catch {}
+      // exit fullscreen
+      try { if (document.exitFullscreen) await document.exitFullscreen(); } catch {}
+    }
+  };
+
+  // Log malpractice events and send to server (best effort)
+  const logEvent = async (type, payload = {}) => {
+    // Severity mapping for deductions and styling
+    const severity = (
+      type === 'tab-switch' || type === 'exit-fullscreen' || type === 'no-face' || type === 'multiple-faces'
+    ) ? 'high' : (type === 'looking-away' ? 'medium' : 'low');
+
+    const ev = { type, severity, payload, at: Date.now() };
+    setEvents((prev) => [...prev, ev]);
+
+    // Notification messages with emojis for better UX
+    const msgMap = {
+      'tab-switch': '⚠️ Tab switch detected. Please return to the interview tab.',
+      'tab-hidden': '⚠️ Tab hidden. Please keep this tab active.',
+      'exit-fullscreen': '⚠️ Fullscreen exited. Please return to fullscreen mode.',
+      'no-face': '👤 No face detected. Please position yourself in frame.',
+      'multiple-faces': '👥 Multiple faces detected. Ensure only you are visible.',
+      'looking-away': '👀 Please maintain eye contact with the camera.',
+    };
+
+    const noticeText = msgMap[type] || 'Proctoring event detected.';
+    setNotice(noticeText);
+
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+      if (notice === noticeText) {
+        setNotice('');
+      }
+    }, 3000);
+
+    // Log event to server (best effort)
+    if (sessionId) {
+      try {
+        await interviewClient.post('/event', { sessionId, type, payload, severity });
+      } catch (e) {
+        console.error('Failed to log event:', e);
+      }
+    }
   };
 
   return (
     <div className="interview-practice-page">
+      {/* Notice Toast */}
+      {notice && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          zIndex: 1000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          borderLeft: '4px solid ' + (
+            notice.includes('⚠️') ? '#ff4d4f' :
+            notice.includes('👤') || notice.includes('👥') ? '#faad14' : '#52c41a'
+          ),
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          maxWidth: '320px'
+        }}>
+          <span style={{ fontSize: '18px' }}>{
+            notice.startsWith('⚠️') ? '⚠️' :
+            notice.startsWith('👤') ? '👤' :
+            notice.startsWith('👥') ? '👥' : '👀'
+          }</span>
+          <span>{notice.replace(/^[^\w\s]+/, '')}</span>
+        </div>
+      )}
+      {/* Finalizing Overlay */}
+      {finalizing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 55 }}>
+          <div style={{ background: '#fff', color: '#111', padding: 16, borderRadius: 10, minWidth: 220, textAlign: 'center', boxShadow: '0 10px 24px rgba(0,0,0,0.25)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Finalizing Interview</div>
+            <div style={{ fontSize: 14, color: '#555', marginBottom: 8 }}>Processing your scores and generating report…</div>
+            <div style={{ fontSize: 12, color: '#888' }}>This should take no more than 10 seconds.</div>
+          </div>
+        </div>
+      )}
+      {showReport && finalReport && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ background: '#fff', color: '#111', padding: 20, borderRadius: 10, maxWidth: 700, width: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+            <h3 style={{ marginTop: 0 }}>Final Report</h3>
+            <div style={{ marginBottom: 10 }}>
+              <strong>Overall Score:</strong> {finalReport.overall_score_100 ?? Math.round((finalReport.overall_score_10 || 0) * 10)} / 100
+            </div>
+            <div style={{ marginBottom: 12, fontSize: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div><strong>Interview Type:</strong> {interviewType}</div>
+              <div><strong>Difficulty:</strong> {difficulty}</div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <strong>Domain:</strong> {(() => { try { const s = JSON.parse(localStorage.getItem('userDomainSelection')||'null'); return s?.domain?.name || s?.domain?.id || 'N/A'; } catch { return 'N/A'; } })()}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <h4>Strengths</h4>
+                <ul>
+                  {(finalReport.strengths || []).map((s, i) => (<li key={`str-${i}`}>{s}</li>))}
+                </ul>
+              </div>
+              <div>
+                <h4>Weaknesses</h4>
+                <ul>
+                  {(finalReport.weaknesses || []).map((w, i) => (<li key={`weak-${i}`}>{w}</li>))}
+                </ul>
+              </div>
+            </div>
+            <div>
+              <h4>Improvements</h4>
+              <ul>
+                {(finalReport.improvements || []).map((imp, i) => (<li key={`imp-${i}`}>{imp}</li>))}
+              </ul>
+            </div>
+            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btnPrimary" onClick={() => setShowReport(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Inline Domain Selection Modal */}
+      <DomainSelection
+        isOpen={showDomainSelection}
+        onClose={() => setShowDomainSelection(false)}
+        onDomainSelect={(payload) => {
+          try {
+            localStorage.setItem('userDomainSelection', JSON.stringify(payload));
+          } catch {}
+          setShowDomainSelection(false);
+          if (payload?.domain?.id) {
+            beginInterviewWithDomain(payload.domain.id);
+          }
+        }}
+      />
       {/* Hero Section */}
       <section ref={heroRef} className="interview-hero">
         <div className="container">
@@ -394,7 +733,7 @@ function InterviewPractice() {
                         rows={5}
                         style={{ width: '100%', padding: 8 }}
                       />
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         <button type="button" className="btn btnGhost" onClick={() => {
                           if ('speechSynthesis' in window && currentQObj?.text) {
                             try {
@@ -404,12 +743,11 @@ function InterviewPractice() {
                             } catch {}
                           }
                         }}>Speak question</button>
+                        <button type="button" className="btn btnGhost" onClick={() => { if (!isSubmittingRef.current) startListening(); }}>Start Listening</button>
+                        <button type="button" className="btn btnGhost" onClick={() => stopListening()}>Stop Listening</button>
+                        <button type="button" className="btn btnPrimary" disabled={loading || finalizing} onClick={nextQuestion}>Submit Answer</button>
                         {sttSupported ? (
-                          isRecording ? (
-                            <button type="button" className="btn btnPrimary" onClick={stopListening}>Stop mic</button>
-                          ) : (
-                            <button type="button" className="btn btnPrimary" onClick={startListening}>Start mic</button>
-                          )
+                          <span style={{ fontSize: 12, color: '#666' }}>{isRecording ? 'Listening…' : 'Mic idle'}</span>
                         ) : (
                           <span style={{ fontSize: 12, color: '#666' }}>Voice input not supported in this browser</span>
                         )}
@@ -474,13 +812,13 @@ function InterviewPractice() {
 
                 <div className="interview-controls">
                   <button className="btn btnGhost" disabled={loading}>Pause</button>
-                  <button onClick={nextQuestion} className="btn btnPrimary" disabled={loading || (!candidateText && !!currentQObj)}>
-                    {currentQuestion < questions[interviewType].length - 1 ? 'Next Question' : 'Finish Interview'}
+                  <button onClick={endInterview} className="btn btnPrimary" disabled={loading || finalizing}>
+                    {finalizing ? 'Processing…' : 'Finish Interview'}
                   </button>
                 </div>
               </div>
             </div>
-         
+          
         </section>
       )}
 

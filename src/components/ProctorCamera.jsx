@@ -78,10 +78,21 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus }
         setCreatingRef(true)
         const imageBase64 = snapshotBase64()
         if (!imageBase64) throw new Error('No frame')
-        await createReference({ sessionId, imageBase64 })
-        if (!cancelled) setCreatedRef(true)
+        const resp = await createReference({ sessionId, imageBase64 })
+        if (!cancelled) {
+          if (resp && (resp.ok === true || resp.refId || resp.embedding)) {
+            setCreatedRef(true)
+            setError('')
+          } else {
+            setError('Failed to create reference image')
+          }
+        }
       } catch (e) {
-        if (!cancelled) setError('Failed to create reference image')
+        if (!cancelled) {
+          const code = e?.response?.status
+          if (code === 503) setError('Vision service unavailable')
+          else setError('Failed to create reference image')
+        }
       } finally {
         if (!cancelled) setCreatingRef(false)
       }
@@ -125,7 +136,7 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus }
             </div>
           )}
           <div style={{ fontSize: 14, color: '#555' }}>
-            <div>Status: {ready ? (createdRef ? 'Verifying' : (creatingRef ? 'Creating reference...' : 'Ready')) : 'Initializing camera...'}</div>
+            <div>Status: {ready ? (createdRef ? 'Reference created • Verifying' : (creatingRef ? 'Creating reference...' : 'Ready')) : 'Initializing camera...'}</div>
             {lastResult && (
               <ul style={{ marginTop: 8 }}>
                 {'ok' in lastResult && <li>OK: {String(lastResult.ok)}</li>}

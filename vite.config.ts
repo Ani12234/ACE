@@ -1,41 +1,28 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
-        changeOrigin: true
+        target: 'http://localhost:4100',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://localhost:4100',
+        changeOrigin: true,
       },
       '/interview': {
         target: 'http://localhost:4100',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/interview/, '/api')
+        rewrite: (path) => path.replace(/^\/interview/, '/api/interview')
       }
-    }
+    },
   },
-  // Allow JSX syntax in .js files (CRA style)
-  esbuild: {
-    // Ensure import analysis can parse JSX in both .js and .jsx
-    loader: 'jsx',
-    include: [/src\/.*\.js$/, /src\/.*\.jsx$/],
-    jsx: 'automatic',
-    tsconfigRaw: {
-      compilerOptions: {
-        jsx: 'react-jsx'
-      }
-    }
+  build: {
+    outDir: 'dist',
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      loader: { '.js': 'jsx', '.jsx': 'jsx' },
-      jsx: 'automatic'
-    }
-  },
-  preview: {
-    port: 5173
-  }
-})
+});
