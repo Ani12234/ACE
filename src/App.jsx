@@ -16,6 +16,7 @@ import CourseRecommendations from './components/CourseRecommendations';
 import CourseDetail from './components/CourseDetail';
 import Dashboard from './pages/Dashboard';
 import AdminRag from './pages/AdminRag';
+import ReferenceSetup from './pages/ReferenceSetup';
 
 function AppContent() {
   const { isAuthenticated, logout } = useAuth();
@@ -34,6 +35,10 @@ function AppContent() {
     } else {
       return <Navigate to="/domain-selection" replace />;
     }
+  };
+
+  const hasReferenceCreated = () => {
+    try { return localStorage.getItem('ace.referenceCreated') === 'true'; } catch { return false; }
   };
 
   const handleLogout = () => {
@@ -109,7 +114,7 @@ function AppContent() {
                 <Link to="/" className="nav-link" onClick={closeMobileMenu}>Home</Link>
                 <Link to="/about" className="nav-link" onClick={closeMobileMenu}>About</Link>
                 <Link to="/features" className="nav-link" onClick={closeMobileMenu}>Features</Link>
-                <Link to="/interview-practice" className="nav-link" onClick={closeMobileMenu}>AI Interview</Link>
+                <Link to="/reference-setup" className="nav-link" onClick={closeMobileMenu}>AI Interview</Link>
                 <Link to="/dashboard" className="nav-link" onClick={closeMobileMenu}>Dashboard</Link>
                 <Link to="/courses" className="nav-link" onClick={closeMobileMenu}>Courses</Link>
                 <button onClick={handleLogout} className="nav-link logout-btn">
@@ -136,7 +141,8 @@ function AppContent() {
           <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
           <Route path="/about" element={isAuthenticated ? <About /> : <Navigate to="/login" replace />} />
           <Route path="/features" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
-          <Route path="/interview-practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/interview-practice" element={isAuthenticated ? (hasReferenceCreated() ? <InterviewPractice /> : <Navigate to="/reference-setup" replace />) : <Navigate to="/login" replace />} />
+          <Route path="/reference-setup" element={isAuthenticated ? <ReferenceSetup /> : <Navigate to="/login" replace />} />
           <Route path="/domain-selection" element={isAuthenticated ? <DomainSelectionPage /> : <Navigate to="/login" replace />} />
           <Route path="/course-recommendations" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
           <Route path="/course-detail/:courseId" element={isAuthenticated ? <CourseDetail /> : <Navigate to="/login" replace />} />
@@ -144,12 +150,12 @@ function AppContent() {
           
           {/* Direct routes for main sections */}
           <Route path="/courses" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
-          <Route path="/assessment" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/assessment" element={isAuthenticated ? (hasReferenceCreated() ? <InterviewPractice /> : <Navigate to="/reference-setup" replace />) : <Navigate to="/login" replace />} />
           <Route path="/career-guidance" element={isAuthenticated ? <Features /> : <Navigate to="/login" replace />} />
           <Route path="/certificates" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
           <Route path="/all-courses" element={isAuthenticated ? <CourseRecommendations /> : <Navigate to="/login" replace />} />
-          <Route path="/practice" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
-          <Route path="/interview" element={isAuthenticated ? <InterviewPractice /> : <Navigate to="/login" replace />} />
+          <Route path="/practice" element={isAuthenticated ? (hasReferenceCreated() ? <InterviewPractice /> : <Navigate to="/reference-setup" replace />) : <Navigate to="/login" replace />} />
+          <Route path="/interview" element={isAuthenticated ? (hasReferenceCreated() ? <InterviewPractice /> : <Navigate to="/reference-setup" replace />) : <Navigate to="/login" replace />} />
           <Route path="/progress" element={isAuthenticated ? <MainHomePage /> : <Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

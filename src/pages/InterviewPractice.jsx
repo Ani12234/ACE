@@ -31,6 +31,8 @@ function InterviewPractice() {
   const [showReport, setShowReport] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [notice, setNotice] = useState('');
+  const [noFaceNotified, setNoFaceNotified] = useState(false);
+  const [lowMatchCount, setLowMatchCount] = useState(0);
   const [showDomainSelection, setShowDomainSelection] = useState(false);
   // Voice: Speech-to-Text (browser Web Speech API) and Text-to-Speech
   const recognitionRef = useRef(null);
@@ -38,6 +40,7 @@ function InterviewPractice() {
   const isSubmittingRef = useRef(false);
   const candidateTextRef = useRef('');
   const answerTimerRef = useRef(null);
+  const silenceTimerRef = useRef(null);
   const lastProctorRef = useRef({ facesCount: null, multipleFaces: null, lookingAway: null });
   const [sttSupported] = useState(() => {
     return typeof window !== 'undefined' && (
@@ -99,6 +102,12 @@ function InterviewPractice() {
           if (!isSubmittingRef.current) startListening();
         };
         window.speechSynthesis.speak(utter);
+        setTimeout(() => {
+          if (!isSubmittingRef.current && !answerTimerRef.current) startListening();
+        }, 1000);
+      }
+      else {
+        if (!isSubmittingRef.current) startListening();
       }
     } catch {}
   }, [currentQObj?.text]);
@@ -118,7 +127,25 @@ function InterviewPractice() {
     } catch {}
   }, [proctorStatus]);
 
-  const startListening = () => {
+  useEffect(() => {
+    const p = proctorStatus || {};
+    const score = typeof p.matchScore === 'number' ? p.matchScore : null;
+    const low = score !== null && score < 0.85;
+    const good = score !== null && score >= 0.85;
+    if (low) {
+      setLowMatchCount((c) => Math.min(3, c + 1));
+    } else if (good) {
+      setLowMatchCount(0);
+      if (noFaceNotified && notice && notice.startsWith('⚠️ No face')) setNoFaceNotified(false), setNotice('');
+    }
+    const activelyListening = Boolean(answerTimerRef.current) || isRecording;
+    if (!activelyListening && !noFaceNotified && (p.ok === false || (lowMatchCount + (low ? 1 : 0)) >= 2)) {
+      setNotice('⚠️ No face detected. Please align your face in the frame with good lighting.');
+      setNoFaceNotified(true);
+    }
+  }, [proctorStatus]);
+
+  const startListening = async () => {
     if (!sttSupported || isRecording) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
@@ -127,10 +154,20 @@ function InterviewPractice() {
     rec.interimResults = true;
     rec.lang = 'en-US';
     let finalText = '';
+    const SILENCE_MS = 1200;
     // Clear any previous answer window timer
     if (answerTimerRef.current) {
       clearTimeout(answerTimerRef.current);
       answerTimerRef.current = null;
+    }
+    try {
+      if (navigator?.mediaDevices?.getUserMedia) {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        try { micStream.getTracks().forEach(t => t.stop()); } catch {}
+      }
+    } catch (e) {
+      setNotice('🎙️ Microphone permission is required. Please allow mic access and try again.');
+      return;
     }
     rec.onresult = (e) => {
       let interim = '';
@@ -143,40 +180,74 @@ function InterviewPractice() {
       const combined = base ? base + (interim ? (' ' + interim) : '') : (candidateTextRef.current || interim);
       candidateTextRef.current = combined;
       setCandidateText(combined);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = setTimeout(() => { try { rec.stop(); } catch {} }, SILENCE_MS);
     };
     rec.onerror = () => {
-      setIsRecording(false);
       // attempt a quick restart to keep hands-free
       if (!isSubmittingRef.current) setTimeout(() => startListening(), 300);
     };
     rec.onend = () => {
-      setIsRecording(false);
       // Clear timer if it hasn't fired
       if (answerTimerRef.current) {
         clearTimeout(answerTimerRef.current);
         answerTimerRef.current = null;
       }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       // Auto-advance when user stops speaking and we have content
       if (!isSubmittingRef.current) {
-        if ((candidateTextRef.current || '').trim().length > 0) {
+        const finalOnly = (typeof finalText === 'string' ? finalText : '').trim();
+        const fallbackCombined = (candidateTextRef.current || '').trim();
+        const toSubmit = finalOnly.length > 0 ? finalOnly : fallbackCombined;
+        if (toSubmit.length > 0) {
+          candidateTextRef.current = toSubmit;
+          setCandidateText(toSubmit);
           nextQuestion();
         } else {
-          // restart listening to encourage answer
           setTimeout(() => startListening(), 300);
         }
       }
     };
-    rec.start();
+    try { rec.start(); } catch (e) { setNotice('🎙️ Microphone permission is required. Please allow mic access and try again.'); return; }
     setIsRecording(true);
     // Schedule auto-stop and submit after the fixed answer window
     answerTimerRef.current = setTimeout(() => {
       if (!isSubmittingRef.current) {
         try { stopListening(); } catch {}
-        // If user said nothing, still advance per auto policy
-        nextQuestion();
+        const candidate = (candidateTextRef.current || '').trim();
+        if (candidate.length > 0) {
+          nextQuestion();
+        } else {
+          // Do not submit an empty answer. Prompt and restart listening.
+          setNotice('🎤 No answer captured. Please speak or type your answer.');
+          setTimeout(() => startListening(), 500);
+        }
       }
     }, ANSWER_WINDOW_MS + ANSWER_GRACE_MS);
   };
+
+  useEffect(() => {
+    if (!isInterviewActive) return;
+    if (!currentQObj?.id) return;
+    if (isSubmittingRef.current) return;
+    if (answerTimerRef.current) return;
+    setTimeout(() => {
+      if (!isSubmittingRef.current && !answerTimerRef.current) startListening();
+    }, 600);
+  }, [isInterviewActive, currentQObj?.id]);
+
+  useEffect(() => {
+    if (!isInterviewActive) return;
+    const iv = setInterval(() => {
+      if (!isSubmittingRef.current && !answerTimerRef.current && sttSupported && !isRecording && currentQObj?.id) {
+        startListening();
+      }
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [isInterviewActive, sttSupported, currentQObj?.id, isRecording]);
 
   const stopListening = () => {
     const rec = recognitionRef.current;
@@ -316,11 +387,7 @@ function InterviewPractice() {
       let finalReportLocal = null;
       if (sessionId) {
         try {
-          // Add timeout to prevent indefinite hanging
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-          const { data } = await api.post('/scoring/final', {
+          await api.post('/scoring/final/start', {
             sessionId,
             qa: qaRef.current.map(x => ({ question: x.q, answer: x.a })),
             proctor: {
@@ -328,26 +395,28 @@ function InterviewPractice() {
               stats: proctorStatus,
               events,
             },
-          }, { signal: controller.signal });
+          }, { timeout: 10000 });
 
-          clearTimeout(timeoutId);
-          if (data?.report) {
-            setFinalReport(data.report);
-            finalReportLocal = data.report;
-            setShowReport(true);
+          const startedAt = Date.now();
+          const TIMEOUT_MS = 30000;
+          const SLEEP = (ms) => new Promise(r => setTimeout(r, ms));
+          while (Date.now() - startedAt < TIMEOUT_MS) {
+            try {
+              const { data } = await api.get(`/scoring/report/${encodeURIComponent(sessionId)}?ts=${Date.now()}`, { timeout: 8000 });
+              if (data?.ready && data?.report) {
+                setFinalReport(data.report);
+                finalReportLocal = data.report;
+                setShowReport(true);
+                break;
+              }
+            } catch {}
+            await SLEEP(1000);
+          }
+          if (!finalReportLocal) {
+            console.warn('scoring/report not ready within timeout');
           }
         } catch (e) {
-          console.warn('scoring/final failed', e?.message || e);
-          // Show a fallback report if scoring fails
-          finalReportLocal = {
-            overall_score_100: 70,
-            overall_score_10: 7,
-            strengths: ['Completed interview'],
-            weaknesses: ['Scoring timeout - review answers manually'],
-            improvements: ['Ensure backend is running and network is stable'],
-          };
-          setFinalReport(finalReportLocal);
-          setShowReport(true);
+          console.warn('scoring/final/start failed', e?.message || e);
         }
       }
       // Save report locally
@@ -369,7 +438,7 @@ function InterviewPractice() {
         interviewType,
         difficulty,
         domain: domainMeta?.domain || null,
-        overallScore100: finalReportLocal?.overall_score_100 ?? (typeof finalReportLocal?.overall_score_10 === 'number' ? Math.round(finalReportLocal.overall_score_10 * 10) : 70),
+        overallScore100: finalReportLocal?.overall_score_100 ?? (typeof finalReportLocal?.overall_score_10 === 'number' ? Math.round(finalReportLocal.overall_score_10 * 10) : undefined),
         strengths: finalReportLocal?.strengths || null,
         weaknesses: finalReportLocal?.weaknesses || null,
         improvements: finalReportLocal?.improvements || null,
@@ -721,6 +790,7 @@ function InterviewPractice() {
                       sessionId={sessionId}
                       intervalMs={4000}
                       onStatus={setProctorStatus}
+                      paused={Boolean(answerTimerRef.current) || isRecording || isSubmittingRef.current}
                     />
 
                     <div style={{ marginTop: '1rem' }}>
@@ -734,20 +804,8 @@ function InterviewPractice() {
                         style={{ width: '100%', padding: 8 }}
                       />
                       <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button type="button" className="btn btnGhost" onClick={() => {
-                          if ('speechSynthesis' in window && currentQObj?.text) {
-                            try {
-                              window.speechSynthesis.cancel();
-                              const u = new SpeechSynthesisUtterance(currentQObj.text);
-                              window.speechSynthesis.speak(u);
-                            } catch {}
-                          }
-                        }}>Speak question</button>
-                        <button type="button" className="btn btnGhost" onClick={() => { if (!isSubmittingRef.current) startListening(); }}>Start Listening</button>
-                        <button type="button" className="btn btnGhost" onClick={() => stopListening()}>Stop Listening</button>
-                        <button type="button" className="btn btnPrimary" disabled={loading || finalizing} onClick={nextQuestion}>Submit Answer</button>
                         {sttSupported ? (
-                          <span style={{ fontSize: 12, color: '#666' }}>{isRecording ? 'Listening…' : 'Mic idle'}</span>
+                          <span style={{ fontSize: 12, color: '#666' }}>{answerTimerRef.current ? 'Listening…' : 'Mic idle'}</span>
                         ) : (
                           <span style={{ fontSize: 12, color: '#666' }}>Voice input not supported in this browser</span>
                         )}
