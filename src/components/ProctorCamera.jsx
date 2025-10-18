@@ -15,6 +15,9 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
   const [lastResult, setLastResult] = useState(null)
   const [error, setError] = useState('')
   const [lastRefResp, setLastRefResp] = useState(null)
+  const failCountRef = useRef(0)
+  const backoffUntilRef = useRef(0)
+  const lastUiAtRef = useRef(0)
 
   // Start webcam
   useEffect(() => {
@@ -135,13 +138,29 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
     if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = setInterval(async () => {
       try {
+        // If in backoff, skip verify until the backoff interval elapses
+        if (backoffUntilRef.current && Date.now() < backoffUntilRef.current) return
+        const t0 = Date.now()
         const imageBase64 = snapshotBase64()
         if (!imageBase64) return
         const res = await verifyFrame({ sessionId, imageBase64 })
-        setLastResult(res)
-        onStatus && onStatus(res)
+        const dur = Date.now() - t0
+        const now = Date.now()
+        // throttle UI updates to at most once per 1500ms and skip very slow responses to reduce flicker
+        if ((now - (lastUiAtRef.current || 0) >= 1500) && dur < 3500) {
+          setLastResult(res)
+          onStatus && onStatus(res)
+          lastUiAtRef.current = now
+        }
+        // success: reset failure/backoff
+        failCountRef.current = 0
+        backoffUntilRef.current = 0
       } catch (e) {
-        // transient errors are expected if service is warming up
+        // transient errors are expected; implement backoff after repeated failures
+        failCountRef.current = Math.min(10, (failCountRef.current || 0) + 1)
+        if (failCountRef.current >= 3) {
+          backoffUntilRef.current = Date.now() + 60000 // pause for 60s
+        }
       }
     }, intervalMs)
     return () => {
@@ -168,6 +187,9 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
           )}
           <div style={{ fontSize: 14, color: '#555' }}>
             <div>Status: {ready ? (createdRef ? 'Reference created • Verifying' : (creatingRef ? 'Creating reference...' : (error ? 'Error' : 'Ready'))) : 'Initializing camera...'}</div>
+            {backoffUntilRef.current && Date.now() < backoffUntilRef.current && (
+              <div style={{ marginTop: 4, color: '#b45309', fontSize: 12 }}>Vision service unavailable. Proctoring paused for a moment…</div>
+            )}
             {lastRefResp && (
               <div style={{ marginTop: 4, fontSize: 12, color: '#888' }}>
                 Ref ok: {String(lastRefResp.ok)} | hasFace: {String(lastRefResp.hasFace)} | faces: {String(lastRefResp.facesCount ?? '')} {lastRefResp.refId ? `| refId: ${lastRefResp.refId}` : ''}
