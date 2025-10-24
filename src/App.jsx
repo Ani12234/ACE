@@ -17,6 +17,7 @@ import CourseDetail from './components/CourseDetail';
 import Dashboard from './pages/Dashboard';
 import AdminRag from './pages/AdminRag';
 import ReferenceSetup from './pages/ReferenceSetup';
+import Loader from './components/Loader';
 
 function AppContent() {
   const { isAuthenticated, logout } = useAuth();
@@ -166,7 +167,15 @@ function AppContent() {
 }
 
 function App() {
-  return (
+  const [loading, setLoading] = useState(true);
+
+  return loading ? (
+    <Loader
+      titleLines={["ACE", "AI BASED", "COGNITIVE EDUCATION"]}
+      durationMs={4500}
+      onComplete={() => setLoading(false)}
+    />
+  ) : (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
