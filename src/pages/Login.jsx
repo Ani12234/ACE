@@ -125,11 +125,9 @@ function Login() {
       const existingDomainSelection = localStorage.getItem('userDomainSelection');
       
       if (existingDomainSelection) {
-        // User has already selected domain, go directly to dashboard
         navigate('/dashboard');
       } else {
-        // New user, show domain selection popup
-        setShowDomainSelection(true);
+        navigate('/domain-selection');
       }
       
       setIsLoading(false);
@@ -143,10 +141,12 @@ function Login() {
       await login();
 
       const existingDomainSelection = localStorage.getItem('userDomainSelection');
-      if (existingDomainSelection) {
+      const hasSkippedDomainSelection = localStorage.getItem('ace.domainSelectionSkipped') === 'true';
+      
+      if (existingDomainSelection || hasSkippedDomainSelection) {
         navigate('/dashboard');
       } else {
-        setShowDomainSelection(true);
+        navigate('/domain-selection');
       }
     } catch (err) {
       // eslint-disable-next-line no-console

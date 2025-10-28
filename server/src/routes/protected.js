@@ -187,12 +187,36 @@ router.post('/vision/verify', requireAuth, async (req, res) => {
 router.post('/scoring/final', requireAuth, async (req, res) => {
   try {
     const { sessionId, qa = [], proctor = {} } = req.body || {}
-    // Heuristic content/delivery scores based on length and basic structure
+    // Heuristic content/delivery scores based on length and answer quality
     const norm = (v, a, b) => Math.max(0, Math.min(1, (v - a) / Math.max(1, b - a)))
     const answers = Array.isArray(qa) ? qa : []
+    
+    // Analyze answer quality
+    const analyzeAnswer = (answer) => {
+      const text = String(answer || '').trim()
+      const len = text.length
+      const hasKeyTerms = /(because|example|when|how|why|what|difference|compare|explain)/i.test(text)
+      const hasVaguePhrases = /(i want to|i think|maybe|kind of|sort of|a bit)/i.test(text)
+      const wordCount = text.split(/\s+/).filter(w => w.length > 0).length
+      
+      // Poor quality indicators
+      if (len < 30) return { quality: 'very_poor', score: 1 }
+      if (len < 50 || wordCount < 10) return { quality: 'poor', score: 2 }
+      if (hasVaguePhrases && len < 100) return { quality: 'vague', score: 3 }
+      if (len < 80) return { quality: 'brief', score: 4 }
+      if (hasKeyTerms && len >= 100 && wordCount >= 15) return { quality: 'decent', score: 6 }
+      if (len >= 150 && wordCount >= 25) return { quality: 'good', score: 7 }
+      if (hasKeyTerms && len >= 200 && wordCount >= 35) return { quality: 'very_good', score: 8 }
+      
+      return { quality: 'moderate', score: 5 }
+    }
+    
+    const analyses = answers.map(x => analyzeAnswer(x.answer))
+    const avgScore = analyses.length > 0 ? analyses.reduce((sum, a) => sum + a.score, 0) / analyses.length : 0
     const lengths = answers.map(x => String(x?.answer || '').trim().length)
     const avgLen = lengths.length ? (lengths.reduce((s, n) => s + n, 0) / lengths.length) : 0
-    const content10 = Math.round(10 * norm(avgLen, 60, 500)) // reward moderate detail
+    
+    const content10 = Math.round(avgScore) // based on quality analysis
     const delivery10 = Math.round(10 * norm(avgLen, 40, 300)) // brevity/clarity proxy
     const integrity = typeof proctor?.integrity === 'number' ? proctor.integrity : 1
     const severeCount = (proctor?.events || []).filter(e => e?.severity === 'high').length
@@ -201,18 +225,35 @@ router.post('/scoring/final', requireAuth, async (req, res) => {
     const overall10 = Math.max(0, Math.min(10, Math.round(rawOverall)))
     const overall100 = Math.round(overall10 * 10)
 
-    // Simple suggestions
+    // Simple suggestions based on quality analysis
     const strengths = []
-    if (avgLen > 120) strengths.push('Provides sufficient detail in answers')
-    strengths.push('Maintains coherent flow in responses')
     const weaknesses = []
-    if (avgLen < 100) weaknesses.push('Answers are too brief; add specifics and examples')
-    weaknesses.push('Could structure answers with definition, key points, example, and trade-offs')
-    const improvements = [
-      'Use a clear structure: what, how, example, trade-offs',
-      'Include 1–2 concrete examples or metrics per answer',
-      'Keep answers concise but complete (2–4 sentences each)'
-    ]
+    const improvements = []
+    
+    if (avgScore >= 6) {
+      strengths.push('Provides adequate detail in technical responses')
+      strengths.push('Demonstrates basic understanding of concepts')
+    }
+    if (avgScore >= 4) {
+      strengths.push('Maintains coherent flow in responses')
+    } else {
+      weaknesses.push('Answers are too brief or unclear')
+      improvements.push('Provide more detailed explanations with specific examples')
+    }
+    
+    if (avgScore < 4) {
+      weaknesses.push('Unable to demonstrate core technical concepts')
+      weaknesses.push('Responses lack structure and technical depth')
+      improvements.push('Study fundamental concepts before attempting technical interviews')
+      improvements.push('Practice explaining technical concepts clearly and concisely')
+    } else {
+      improvements.push('Use a clear structure: what, how, example, trade-offs')
+      improvements.push('Include 1–2 concrete examples or metrics per answer')
+    }
+    
+    if (weaknesses.length === 0) {
+      weaknesses.push('Could structure answers with definition, key points, example, and trade-offs')
+    }
 
     const report = {
       content_score_10: content10,

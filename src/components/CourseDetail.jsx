@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import CourseProgressManager from '../utils/courseProgress';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
@@ -35,18 +36,14 @@ const CourseDetail = () => {
   };
 
   useEffect(() => {
-    // Check if user is already enrolled
-    const enrolledCourses = JSON.parse(localStorage.getItem('enrolledCourses') || '[]');
-    setIsEnrolled(enrolledCourses.some(c => c.id === course.id));
+    // Check if user is already enrolled using progress manager
+    setIsEnrolled(CourseProgressManager.isEnrolled(course.id));
   }, [course.id]);
   
   const handleEnroll = () => {
-    setIsEnrolled(true);
-    // Save enrollment status
-    const enrolledCourses = JSON.parse(localStorage.getItem('enrolledCourses') || '[]');
-    if (!enrolledCourses.some(c => c.id === course.id)) {
-      enrolledCourses.push(course);
-      localStorage.setItem('enrolledCourses', JSON.stringify(enrolledCourses));
+    const success = CourseProgressManager.enrollInCourse(course);
+    if (success) {
+      setIsEnrolled(true);
     }
   };
   

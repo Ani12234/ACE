@@ -10,19 +10,7 @@ const Dashboard = () => {
       const raw = localStorage.getItem('interviewReports') || '[]';
       const stored = JSON.parse(raw);
       const reportsArray = Array.isArray(stored) ? stored : [];
-      // Migrate existing reports with null scores
-      const migrated = reportsArray.map(report => {
-        if (report.overallScore100 === null || report.overallScore100 === undefined) {
-          return { ...report, overallScore100: 70 };
-        }
-        return report;
-      });
-      if (migrated.some((r, i) => r.overallScore100 !== reportsArray[i]?.overallScore100)) {
-        localStorage.setItem('interviewReports', JSON.stringify(migrated));
-        setReports(migrated);
-      } else {
-        setReports(reportsArray);
-      }
+      setReports(reportsArray);
     } catch (error) {
       console.error('Failed to load reports:', error);
       setReports([]);
@@ -51,12 +39,37 @@ const Dashboard = () => {
   };
 
   const getScoreTrend = () => {
-    const validReports = reports.filter(r => r.overallScore100 !== null && r.overallScore100 !== undefined);
-    if (validReports.length < 2) return 'Not enough data';
-    const sorted = validReports.sort((a, b) => a.startedAt - b.startedAt);
-    const first = sorted[0].overallScore100;
-    const last = sorted[sorted.length - 1].overallScore100;
-    return last > first ? 'Improving' : last < first ? 'Declining' : 'Stable';
+    const validReports = reports
+      .filter(r => r.overallScore100 !== null && r.overallScore100 !== undefined)
+      .sort((a, b) => {
+        const timeA = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+        const timeB = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+        return timeA - timeB;
+      });
+    
+    if (validReports.length < 2) return 'N/A';
+    
+    // Compare last 3 to first 3 for trend calculation
+    const recent = validReports.slice(-3).map(r => r.overallScore100);
+    const older = validReports.slice(0, 3).map(r => r.overallScore100);
+    
+    const recentAvg = recent.reduce((sum, score) => sum + score, 0) / recent.length;
+    const olderAvg = older.reduce((sum, score) => sum + score, 0) / older.length;
+    
+    const diff = recentAvg - olderAvg;
+    
+    if (Math.abs(diff) < 2) return '→ Stable';
+    if (diff > 0) return `↑ +${Math.round(diff)}`;
+    return `↓ ${Math.round(diff)}`;
+  };
+
+  const deleteReport = (id) => {
+    if (window.confirm('Are you sure you want to delete this interview report? This action cannot be undone.')) {
+      const updatedReports = reports.filter(report => report.id !== id);
+      localStorage.setItem('interviewReports', JSON.stringify(updatedReports));
+      setReports(updatedReports);
+      if (expandedReport === id) setExpandedReport(null);
+    }
   };
 
   return (
@@ -105,14 +118,33 @@ const Dashboard = () => {
                     {report.domain && ` (${report.domain?.name || report.domain?.id || 'N/A'})`}
                   </h3>
                   <p style={{ margin: '5px 0', color: '#666' }}>
-                    {formatDate(report.startedAt)} - Score: {report.overallScore100 || 'N/A'} / 100
+                    {formatDate(report.startedAt)} - Score: {report.overallScore100 !== null && report.overallScore100 !== undefined ? report.overallScore100 : 'N/A'} / 100
                   </p>
                 </div>
-                <span>{expandedReport === report.id ? '▼' : '▶'}</span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteReport(report.id);
+                    }}
+                    style={{
+                      background: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <span>{expandedReport === report.id ? '▼' : '▶'}</span>
+                </div>
               </div>
               {expandedReport === report.id && (
                 <div style={{ padding: '20px', background: '#fff', color: '#333333' }}>
-                  <h4>Overall Score: {report.overallScore100 || 'N/A'} / 100</h4>
+                  <h4>Overall Score: {report.overallScore100 !== null && report.overallScore100 !== undefined ? report.overallScore100 : 'N/A'} / 100</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                     <div>
                       <h5>Strengths</h5>

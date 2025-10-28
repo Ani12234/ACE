@@ -13,11 +13,13 @@ gsap.registerPlugin(ScrollTrigger);
 
 function InterviewPractice() {
   // Config: duration to listen per question before auto-submitting
-  const ANSWER_WINDOW_MS = 40000; // give more time per question
-  const ANSWER_GRACE_MS = 1500;   // small grace before auto-restart or submit
-  const MIN_WORDS = 2; // do not submit if transcript is too short/empty
+  const ANSWER_WINDOW_MS = 15000; // 15 seconds per question
+  const ANSWER_GRACE_MS = 1000;   // small grace before auto-restart or submit
+  const SILENCE_TIMEOUT_MS = 30000; // Auto-skip if no speech detected for 30 seconds
+  const MIN_WORDS = 3; // minimum words for valid answer
   const USE_MICRECORDER = true; // rely on MicRecorder as the single STT source
   const heroRef = useRef(null);
+  const interviewStartTimeRef = useRef(null);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   // Backend-driven state
   const [sessionId, setSessionId] = useState(null);
@@ -47,6 +49,7 @@ function InterviewPractice() {
   const candidateTextRef = useRef('');
   const answerTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
+  const lastSpeechDetectedRef = useRef(null); // track when speech was last detected
   const noFaceStreakRef = useRef(0);
   const micStreamRef = useRef(null);
   const stopRequestedRef = useRef(false);
@@ -168,9 +171,25 @@ function InterviewPractice() {
     }
   }, [proctorStatus]);
 
+  const requestMicPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Immediately stop the stream to avoid holding it
+      stream.getTracks().forEach(track => track.stop());
+      console.log('[InterviewPractice] Mic permission granted');
+      return true;
+    } catch (error) {
+      console.error('[InterviewPractice] Mic permission denied:', error);
+      setNotice('⚠️ Microphone permission required for voice input. Please allow access.');
+      return false;
+    }
+  };
+
   const startListening = async () => {
     if (isRecording) return;
-    // When using MicRecorder or when SpeechRecognition is not supported, use a timer-based window only
+    // Request mic permission first to avoid collision
+    const permissionGranted = await requestMicPermission();
+    if (!permissionGranted) return;
     if (USE_MICRECORDER || !sttSupported) {
       // Clear any previous answer window timer
       if (answerTimerRef.current) {
@@ -190,6 +209,21 @@ function InterviewPractice() {
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
+      // Smart silence detection: auto-skip if no speech detected for 30 seconds
+      lastSpeechDetectedRef.current = Date.now();
+      const checkSilence = () => {
+        if (!isRecording || isSubmittingRef.current) return;
+        const silenceDuration = Date.now() - lastSpeechDetectedRef.current;
+        if (silenceDuration >= SILENCE_TIMEOUT_MS) {
+          setNotice('⏭️ No speech detected for 30 seconds. Moving to next question.');
+          setQaState('submitting');
+          setTimeout(() => nextQuestion(), 500);
+        } else {
+          silenceTimerRef.current = setTimeout(checkSilence, 2000); // check every 2 seconds
+        }
+      };
+      silenceTimerRef.current = setTimeout(checkSilence, 2000);
+      
       // Provide a short window for the user to type, then auto-submit
       answerTimerRef.current = setTimeout(() => {
         if (!isSubmittingRef.current) {
@@ -199,9 +233,23 @@ function InterviewPractice() {
             setQaState('submitting');
             nextQuestion();
           } else {
-            setNotice('🎤 No clear answer captured. Please speak more clearly or type your answer.');
-            setTimeout(() => startListening(), 400);
+            // Check if typed input was provided
+            const typedText = candidateTextRef.current || '';
+            if (typedText.trim().length > MIN_WORDS * 5) {
+              setQaState('submitting');
+              nextQuestion();
+            } else {
+              setNotice('⏭️ Time limit reached. Moving to next question.');
+              setTimeout(() => {
+                setQaState('submitting');
+                nextQuestion();
+              }, 500);
+            }
           }
+        }
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
         }
         setIsRecording(false);
       }, ANSWER_WINDOW_MS + ANSWER_GRACE_MS);
@@ -375,6 +423,8 @@ function InterviewPractice() {
 
   const beginInterviewWithDomain = async (domainId) => {
     try {
+      // Track when the interview actually starts
+      interviewStartTimeRef.current = Date.now();
       // Using stored user email if available
       const userRaw = localStorage.getItem('user');
       const user = userRaw ? JSON.parse(userRaw) : null;
@@ -534,14 +584,14 @@ function InterviewPractice() {
             },
             domain: domainPayload,
             forceRecompute: true,
-          }, { timeout: 10000 });
+          }, { timeout: 30000 });
 
           const startedAt = Date.now();
           const TIMEOUT_MS = 30000;
           const SLEEP = (ms) => new Promise(r => setTimeout(r, ms));
           while (Date.now() - startedAt < TIMEOUT_MS) {
             try {
-              const { data } = await api.get(`/scoring/report/${encodeURIComponent(sessionId)}?ts=${Date.now()}`, { timeout: 8000 });
+              const { data } = await api.get(`/scoring/report/${encodeURIComponent(sessionId)}?ts=${Date.now()}`, { timeout: 30000 });
               if (data?.ready && data?.report) {
                 setFinalReport(data.report);
                 finalReportLocal = data.report;
@@ -569,7 +619,7 @@ function InterviewPractice() {
       const report = {
         id: `${Date.now()}`,
         sessionId: sessionId || null,
-        startedAt: Date.now(),
+        startedAt: interviewStartTimeRef.current || Date.now(),
         finishedAt: Date.now(),
         qa: qaRef.current.slice(),
         events,
@@ -944,7 +994,12 @@ function InterviewPractice() {
                       <textarea
                         id="candidateAnswer"
                         value={candidateText}
-                        onChange={(e) => setCandidateText(e.target.value)}
+                        onChange={(e) => {
+                          lastSpeechDetectedRef.current = Date.now();
+                          const text = e.target.value;
+                          candidateTextRef.current = text;
+                          setCandidateText(text);
+                        }}
                         placeholder="Type your answer here..."
                         rows={5}
                         style={{ width: '100%', padding: 8 }}
@@ -954,6 +1009,9 @@ function InterviewPractice() {
                         showControls={false}
                         onTranscript={(text) => {
                           if (!text) return;
+                          console.log('[InterviewPractice] Received transcript:', text);
+                          // Track speech detection for silence timeout
+                          lastSpeechDetectedRef.current = Date.now();
                           // sanitize: collapse consecutive duplicate words to reduce stutter
                           const cleaned = text
                             .replace(/\b(\w+)(\s+\1\b)+/gi, '$1')
@@ -965,7 +1023,10 @@ function InterviewPractice() {
                       />
                       <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         {sttSupported ? (
-                          <span style={{ fontSize: 12, color: '#666' }}>{answerTimerRef.current || isRecording ? 'Listening…' : 'Mic idle'}</span>
+                          <>
+                            <span style={{ fontSize: 12, color: '#666' }}>{answerTimerRef.current || isRecording ? 'Listening…' : 'Mic idle'}</span>
+                            <button onClick={requestMicPermission} style={{ fontSize: 12, padding: 4 }}>Grant Mic Access</button>
+                          </>
                         ) : (
                           <span style={{ fontSize: 12, color: '#666' }}>Voice input not supported; type your answer.</span>
                         )}

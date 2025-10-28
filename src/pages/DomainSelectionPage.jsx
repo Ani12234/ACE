@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DomainSelectionPage = () => {
@@ -239,6 +239,10 @@ const DomainSelectionPage = () => {
     setStep(2);
   };
 
+  useEffect(() => {
+    try { sessionStorage.setItem('ace.domainSelectionSeen', 'true'); } catch {}
+  }, []);
+
   const handleContinueToExperience = () => {
     setStep(3);
   };
@@ -253,13 +257,16 @@ const DomainSelectionPage = () => {
     
     localStorage.setItem('userDomainSelection', JSON.stringify(userPreferences));
     
-    // Navigate to course recommendations
-    navigate('/course-recommendations', { 
-      state: { 
-        domain: selectedDomain, 
-        experience: experience 
-      } 
-    });
+    // Navigate to home after completing selections
+    navigate('/');
+  };
+
+  const handleSkipDomainSelection = () => {
+    // Mark domain selection as skipped
+    localStorage.setItem('ace.domainSelectionSkipped', 'true');
+    
+    // Navigate to home
+    navigate('/');
   };
 
   const handleBack = () => {
@@ -276,11 +283,6 @@ const DomainSelectionPage = () => {
       <div className="container">
         {step === 1 ? (
           <>
-            <div className="domain-hero">
-              <h1>Choose Your Learning Path</h1>
-              <p>Select the domain that interests you most to get personalized course recommendations</p>
-            </div>
-
             <div className="domains-grid">
               {domains.map((domain, index) => (
                 <div
@@ -321,6 +323,36 @@ const DomainSelectionPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+            
+            <div className="skip-section" style={{ textAlign: 'center', marginTop: '40px' }}>
+              <p style={{ marginBottom: '20px', color: '#666' }}>
+                Don't want to select a domain right now? You can always choose later in your learning journey.
+              </p>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleSkipDomainSelection}
+                style={{ 
+                  background: 'transparent', 
+                  border: '2px solid #ddd', 
+                  color: '#666',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderColor = '#999';
+                  e.target.style.color = '#333';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                  e.target.style.color = '#666';
+                }}
+              >
+                Skip for Now
+              </button>
             </div>
           </>
         ) : step === 2 ? (

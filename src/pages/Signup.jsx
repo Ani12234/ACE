@@ -55,7 +55,12 @@ function Signup() {
       };
       
       login(userData);
-      navigate('/dashboard');
+      const existingDomainSelection = localStorage.getItem('userDomainSelection');
+      if (existingDomainSelection) {
+        navigate('/dashboard');
+      } else {
+        navigate('/domain-selection');
+      }
       setIsLoading(false);
     }, 1000);
   };
@@ -65,8 +70,12 @@ function Signup() {
     try {
       setIsLoading(true);
       await login();
-      // After Google sign-in, send user to dashboard directly
-      navigate('/dashboard');
+      const existingDomainSelection = localStorage.getItem('userDomainSelection');
+      if (existingDomainSelection) {
+        navigate('/dashboard');
+      } else {
+        navigate('/domain-selection');
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Google sign-up failed:', err);

@@ -11,6 +11,23 @@
   --container: 1200px;
 }
 
+/* Global kill-switch for animations within a subtree */
+.no-anim, .no-anim * {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+.no-anim .card:hover,
+.no-anim .nav-link:hover,
+.no-anim .btn:hover,
+.no-anim .quick-action:hover,
+.no-anim .stat-card:hover,
+.no-anim .module-card:hover,
+.no-anim .feature-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 * { box-sizing: border-box; }
 
 /* Global link styles - remove underlines */
