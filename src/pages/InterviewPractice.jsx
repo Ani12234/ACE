@@ -587,7 +587,7 @@ function InterviewPractice() {
           }, { timeout: 30000 });
 
           const startedAt = Date.now();
-          const TIMEOUT_MS = 30000;
+          const TIMEOUT_MS = 60000;
           const SLEEP = (ms) => new Promise(r => setTimeout(r, ms));
           while (Date.now() - startedAt < TIMEOUT_MS) {
             try {
@@ -602,7 +602,26 @@ function InterviewPractice() {
             await SLEEP(1000);
           }
           if (!finalReportLocal) {
-            console.warn('scoring/report not ready within timeout');
+            console.warn('scoring/report not ready within timeout, falling back to synchronous /scoring/final');
+            try {
+              const { data } = await api.post('/scoring/final', {
+                sessionId,
+                qa: qaRef.current.map(x => ({ question: x.q, answer: x.a })),
+                proctor: {
+                  integrity: proctorStatus?.matchScore ?? null,
+                  stats: proctorStatus,
+                  events,
+                },
+                forceRecompute: true,
+              }, { timeout: 60000 });
+              if (data?.report) {
+                setFinalReport(data.report);
+                finalReportLocal = data.report;
+                setShowReport(true);
+              }
+            } catch (e) {
+              console.warn('synchronous /scoring/final failed', e?.message || e);
+            }
           }
         } catch (e) {
           console.warn('scoring/final/start failed', e?.message || e);

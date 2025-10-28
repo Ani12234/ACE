@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../api/client';
 
 const Dashboard = () => {
   const [reports, setReports] = useState([]);
@@ -25,6 +26,32 @@ const Dashboard = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const syncWithServer = async (id, sessionId) => {
+    if (!sessionId) return;
+    try {
+      const { data } = await api.get(`/scoring/report/${encodeURIComponent(sessionId)}?ts=${Date.now()}`);
+      if (data?.ready && data?.report) {
+        const updated = reports.map(r => {
+          if (r.id !== id) return r;
+          return {
+            ...r,
+            overallScore100: data.report.overall_score_100 ?? (typeof data.report.overall_score_10 === 'number' ? Math.round(data.report.overall_score_10 * 10) : r.overallScore100),
+            strengths: data.report.strengths || r.strengths,
+            weaknesses: data.report.weaknesses || r.weaknesses,
+            improvements: data.report.improvements || r.improvements,
+          };
+        });
+        setReports(updated);
+        try { localStorage.setItem('interviewReports', JSON.stringify(updated)); } catch {}
+        alert('Report synced from server.');
+      } else {
+        alert('Report not ready on server yet. Try again in a few seconds.');
+      }
+    } catch (e) {
+      alert('Failed to sync report: ' + (e?.response?.data?.error || e?.message || 'unknown error'));
+    }
   };
 
   const toggleExpand = (id) => {
@@ -122,6 +149,22 @@ const Dashboard = () => {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {report.sessionId && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); syncWithServer(report.id, report.sessionId); }}
+                      style={{
+                        background: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Sync
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

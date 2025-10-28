@@ -66,12 +66,17 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
     const vw = video.videoWidth
     const vh = video.videoHeight
     if (!vw || !vh) return null
-    canvas.width = vw
-    canvas.height = vh
+    // Downscale to reduce payload size and speed inference
+    const MAX_W = 360
+    const scale = Math.min(1, MAX_W / vw)
+    const tw = Math.max(1, Math.round(vw * scale))
+    const th = Math.max(1, Math.round(vh * scale))
+    canvas.width = tw
+    canvas.height = th
     const ctx = canvas.getContext('2d')
-    ctx.drawImage(video, 0, 0, vw, vh)
-    const dataUrl = canvas.toDataURL('image/png')
-    return dataUrl.replace(/^data:image\/png;base64,/, '')
+    ctx.drawImage(video, 0, 0, tw, th)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+    return dataUrl.replace(/^data:image\/jpeg;base64,/, '')
   }
 
   // Create reference once ready and sessionId available
@@ -146,8 +151,13 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
         const res = await verifyFrame({ sessionId, imageBase64 })
         const dur = Date.now() - t0
         const now = Date.now()
-        // throttle UI updates to at most once per 1500ms and skip very slow responses to reduce flicker
-        if ((now - (lastUiAtRef.current || 0) >= 1500) && dur < 3500) {
+        // If single call took too long, treat as transient failure and apply short backoff
+        if (dur > 10000) {
+          failCountRef.current = Math.min(10, (failCountRef.current || 0) + 1)
+          backoffUntilRef.current = Date.now() + 10000 // pause for 10s when service is slow
+        }
+        // throttle UI updates to at most once per 1500ms (allow slow responses too)
+        if (now - (lastUiAtRef.current || 0) >= 1500) {
           setLastResult(res)
           onStatus && onStatus(res)
           lastUiAtRef.current = now
@@ -159,7 +169,7 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
         // transient errors are expected; implement backoff after repeated failures
         failCountRef.current = Math.min(10, (failCountRef.current || 0) + 1)
         if (failCountRef.current >= 3) {
-          backoffUntilRef.current = Date.now() + 60000 // pause for 60s
+          backoffUntilRef.current = Date.now() + 10000 // pause for 10s
         }
       }
     }, intervalMs)
