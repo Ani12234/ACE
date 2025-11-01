@@ -13,10 +13,14 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [showDomainSelection, setShowDomainSelection] = useState(false);
   const [showCourseRecommendations, setShowCourseRecommendations] = useState(false);
   const [selectedDomainData, setSelectedDomainData] = useState(null);
-  const { login } = useAuth();
+  const { login, loginWithPassword } = useAuth();
   const navigate = useNavigate();
   const animationsRef = useRef([]);
 
@@ -108,30 +112,33 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        name: email.split('@')[0] || 'User',
-        email: email,
-        level: 'Intermediate',
-        streak: 7
-      };
-      
-      login(userData);
-      
-      // Check if user has already selected a domain
+    try {
+      setIsLoading(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+      setEmailError('');
+      setPasswordError('');
+      await loginWithPassword(email, password);
       const existingDomainSelection = localStorage.getItem('userDomainSelection');
-      
-      if (existingDomainSelection) {
+      const hasSkippedDomainSelection = localStorage.getItem('ace.domainSelectionSkipped') === 'true';
+      if (existingDomainSelection || hasSkippedDomainSelection) {
         navigate('/dashboard');
       } else {
         navigate('/domain-selection');
       }
-      
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Email/password login failed:', err);
+      const raw = String(err?.message || 'Login failed');
+      let friendly = raw;
+      if (/EMAIL_NOT_FOUND/i.test(raw)) { friendly = 'No account found for this email.'; setEmailError('No account found for this email.'); }
+      else if (/INVALID_PASSWORD/i.test(raw)) { friendly = 'Incorrect password. Please try again.'; setPasswordError('Incorrect password.'); }
+      else if (/INVALID_LOGIN_CREDENTIALS/i.test(raw)) friendly = 'Invalid email or password. Please try again.';
+      else if (/USER_DISABLED/i.test(raw)) friendly = 'This account has been disabled.';
+      setErrorMsg(friendly);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Google Sign-In handler
@@ -217,9 +224,13 @@ function Login() {
                     className="form-input" 
                     placeholder="Enter your email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
                     required
+                    style={emailError ? { borderColor: '#ff6b6b', background: '#fff6f6' } : undefined}
                   />
+                  {emailError && (
+                    <div style={{ color: '#b00020', fontSize: 13, marginTop: 6 }}>{emailError}</div>
+                  )}
                 </div>
 
                 <div className="form-group" data-stagger>
@@ -230,9 +241,13 @@ function Login() {
                     className="form-input" 
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); if (passwordError) setPasswordError(''); }}
                     required
+                    style={passwordError ? { borderColor: '#ff6b6b', background: '#fff6f6' } : undefined}
                   />
+                  {passwordError && (
+                    <div style={{ color: '#b00020', fontSize: 13, marginTop: 6 }}>{passwordError}</div>
+                  )}
                 </div>
 
                 <div className="form-actions" data-stagger>
@@ -252,6 +267,36 @@ function Login() {
                   >
                     {isLoading ? 'Connecting...' : 'Continue with Google'}
                   </button>
+                  {errorMsg && (
+                    <div
+                      className="toast toast-error"
+                      style={{
+                        marginTop: '12px',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        background: '#ffe6e6',
+                        color: '#7a0b0b',
+                        border: '1px solid #ffb3b3'
+                      }}
+                    >
+                      {errorMsg}
+                    </div>
+                  )}
+                  {successMsg && (
+                    <div
+                      className="toast toast-success"
+                      style={{
+                        marginTop: '12px',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        background: '#e6ffed',
+                        color: '#0b6a2b',
+                        border: '1px solid #b3ffca'
+                      }}
+                    >
+                      {successMsg}
+                    </div>
+                  )}
                   
                   <div className="form-links">
                     <Link to="/signup" className="auth-link">

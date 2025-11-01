@@ -9,6 +9,7 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const timerRef = useRef(null)
+  const streamRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [creatingRef, setCreatingRef] = useState(false)
   const [createdRef, setCreatedRef] = useState(false)
@@ -30,18 +31,48 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
           await videoRef.current.play()
           setReady(true)
         }
+        streamRef.current = stream
       } catch (e) {
         setError('Camera access denied or unavailable')
       }
     }
-    start()
+    if (!paused) start()
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop())
-      }
+      const s = streamRef.current || stream
+      if (s) { try { s.getTracks().forEach(t => t.stop()) } catch {} }
     }
   }, [])
+
+  // Stop or resume camera based on paused flag
+  useEffect(() => {
+    if (paused) {
+      if (timerRef.current) { try { clearInterval(timerRef.current) } catch {} timerRef.current = null }
+      const s = streamRef.current
+      if (s) {
+        try { s.getTracks().forEach(t => t.stop()) } catch {}
+        streamRef.current = null
+      }
+      setReady(false)
+    } else {
+      // reacquire camera if not ready
+      (async () => {
+        if (!ready) {
+          try {
+            const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            if (videoRef.current) {
+              videoRef.current.srcObject = s
+              await videoRef.current.play()
+              streamRef.current = s
+              setReady(true)
+            }
+          } catch (e) {
+            setError('Camera access denied or unavailable')
+          }
+        }
+      })()
+    }
+  }, [paused])
 
   const retryCamera = async () => {
     setError('')
@@ -196,24 +227,10 @@ export default function ProctorCamera({ sessionId, intervalMs = 4000, onStatus, 
             </div>
           )}
           <div style={{ fontSize: 14, color: '#555' }}>
-            <div>Status: {ready ? (createdRef ? 'Reference created • Verifying' : (creatingRef ? 'Creating reference...' : (error ? 'Error' : 'Ready'))) : 'Initializing camera...'}</div>
-            {backoffUntilRef.current && Date.now() < backoffUntilRef.current && (
-              <div style={{ marginTop: 4, color: '#b45309', fontSize: 12 }}>Vision service unavailable. Proctoring paused for a moment…</div>
-            )}
-            {lastRefResp && (
-              <div style={{ marginTop: 4, fontSize: 12, color: '#888' }}>
-                Ref ok: {String(lastRefResp.ok)} | hasFace: {String(lastRefResp.hasFace)} | faces: {String(lastRefResp.facesCount ?? '')} {lastRefResp.refId ? `| refId: ${lastRefResp.refId}` : ''}
+            {lastResult && 'matchScore' in lastResult && (
+              <div style={{ marginTop: 8 }}>
+                <span>Match: {lastResult.matchScore?.toFixed?.(2) ?? lastResult.matchScore}</span>
               </div>
-            )}
-            {lastResult && (
-              <ul style={{ marginTop: 8 }}>
-                {'ok' in lastResult && <li>OK: {String(lastResult.ok)}</li>}
-                {'matchScore' in lastResult && <li>Match Score: {lastResult.matchScore?.toFixed?.(2) ?? lastResult.matchScore}</li>}
-                {'multipleFaces' in lastResult && <li>Multiple Faces: {String(lastResult.multipleFaces)}</li>}
-                {'lookingAway' in lastResult && <li>Looking Away: {String(lastResult.lookingAway)}</li>}
-                {'headPose' in lastResult && <li>Head Pose: {JSON.stringify(lastResult.headPose)}</li>}
-                {'facesCount' in lastResult && <li>Faces Count: {String(lastResult.facesCount)}</li>}
-              </ul>
             )}
           </div>
         </div>

@@ -12,8 +12,10 @@ function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, signupWithPassword } = useAuth();
   const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     const card = cardRef.current;
@@ -43,26 +45,37 @@ function Signup() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        name: name,
-        email: email,
-        level: 'Beginner',
-        streak: 0
-      };
-      
-      login(userData);
+    // Frontend required-field validation
+    if (!name?.trim() || !email?.trim() || !password) {
+      const msg = 'Please fill all required fields.';
+      setErrorMsg(msg);
+      try { window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: msg } })); } catch {}
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+      await signupWithPassword(name, email, password);
       const existingDomainSelection = localStorage.getItem('userDomainSelection');
-      if (existingDomainSelection) {
+      const hasSkippedDomainSelection = localStorage.getItem('ace.domainSelectionSkipped') === 'true';
+      if (existingDomainSelection || hasSkippedDomainSelection) {
         navigate('/dashboard');
       } else {
         navigate('/domain-selection');
       }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Signup failed:', err);
+      const raw = String(err?.message || 'Signup failed');
+      let friendly = raw;
+      if (/EMAIL_EXISTS/i.test(raw)) friendly = 'An account already exists for this email.';
+      else if (/OPERATION_NOT_ALLOWED/i.test(raw)) friendly = 'Email/password sign-up is disabled in Firebase.';
+      else if (/WEAK_PASSWORD/i.test(raw)) friendly = 'Password is too weak. Please use a stronger password.';
+      setErrorMsg(friendly);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Google Sign-Up handler (uses Firebase Google popup via AuthContext)
@@ -87,7 +100,7 @@ function Signup() {
   return (
     <>
       <div className="authWrap">
-        <form ref={cardRef} className="authCard" onSubmit={handleSignup}>
+        <form ref={cardRef} className="authCard" onSubmit={handleSignup} noValidate>
           <h2 className="authTitle">Create your account</h2>
           <p className="authSubtitle">Personalized learning, curated content, and interview simulations await.</p>
 
@@ -145,6 +158,36 @@ function Signup() {
             >
               {isLoading ? 'Connecting...' : 'Sign up with Google'}
             </button>
+            {errorMsg && (
+              <div
+                className="toast toast-error"
+                style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: '#ffe6e6',
+                  color: '#7a0b0b',
+                  border: '1px solid #ffb3b3'
+                }}
+              >
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div
+                className="toast toast-success"
+                style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: '#e6ffed',
+                  color: '#0b6a2b',
+                  border: '1px solid #b3ffca'
+                }}
+              >
+                {successMsg}
+              </div>
+            )}
             <Link to="/login" className="link">I already have an account</Link>
           </div>
         </form>

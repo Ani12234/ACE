@@ -143,3 +143,4 @@ export const CourseProgressManager = {
 };
 
 export default CourseProgressManager;
+

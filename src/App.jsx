@@ -31,6 +31,7 @@ function AppContent() {
   const [enrolledCount, setEnrolledCount] = useState(0);
   const [avgProgress, setAvgProgress] = useState(0);
   const avatarText = (user?.name || user?.email || 'U').charAt(0).toUpperCase();
+  const [toasts, setToasts] = useState([]);
 
   // Check if user has completed domain selection
   const hasCompletedDomainSelection = () => {
@@ -104,6 +105,20 @@ function AppContent() {
     };
   }, []);
 
+  // Global toast listener (login/signup/logout success, etc.)
+  useEffect(() => {
+    function onToast(e) {
+      const { type = 'success', message = 'Done' } = e.detail || {};
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, type, message }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 2500);
+    }
+    window.addEventListener('toast', onToast);
+    return () => window.removeEventListener('toast', onToast);
+  }, []);
+
   // Load simple learning stats for navbar profile menu
   useEffect(() => {
     try {
@@ -130,6 +145,18 @@ function AppContent() {
 
   return (
     <div className="app-shell">
+      {/* Toast container */}
+      <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite" aria-atomic="true">
+        {toasts.map(t => (
+          <div key={t.id} role="status" style={{
+            background: t.type === 'error' ? '#b00020' : '#0b6a2b',
+            color: '#fff', padding: '10px 12px', borderRadius: 8,
+            boxShadow: '0 8px 20px rgba(0,0,0,0.2)', minWidth: 200, maxWidth: 360
+          }}>
+            {t.message}
+          </div>
+        ))}
+      </div>
       <header className="app-header">
         <div className="container header-inner">
           <Link to={"/"} className="brand" aria-label="AI E-Learning Home">

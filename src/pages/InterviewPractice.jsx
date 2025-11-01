@@ -13,7 +13,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 function InterviewPractice() {
   // Config: duration to listen per question before auto-submitting
-  const ANSWER_WINDOW_MS = 15000; // 15 seconds per question
+  const ANSWER_WINDOW_MS = 30000; // 30 seconds per question
   const ANSWER_GRACE_MS = 1000;   // small grace before auto-restart or submit
   const SILENCE_TIMEOUT_MS = 30000; // Auto-skip if no speech detected for 30 seconds
   const MIN_WORDS = 3; // minimum words for valid answer
@@ -38,6 +38,7 @@ function InterviewPractice() {
   const [showReport, setShowReport] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [notice, setNotice] = useState('');
+  const noticeTimerRef = useRef(null);
   const [noFaceNotified, setNoFaceNotified] = useState(false);
   const [lowMatchCount, setLowMatchCount] = useState(0);
   const [goodMatchCount, setGoodMatchCount] = useState(0);
@@ -141,6 +142,20 @@ function InterviewPractice() {
       lastProctorRef.current = { facesCount: now.facesCount, multipleFaces: now.multipleFaces, lookingAway: now.lookingAway };
     } catch {}
   }, [proctorStatus]);
+
+  // Auto-dismiss notices reliably
+  useEffect(() => {
+    if (noticeTimerRef.current) { try { clearTimeout(noticeTimerRef.current); } catch {} noticeTimerRef.current = null; }
+    if (notice) {
+      noticeTimerRef.current = setTimeout(() => {
+        setNotice('');
+        noticeTimerRef.current = null;
+      }, 3000);
+    }
+    return () => {
+      if (noticeTimerRef.current) { try { clearTimeout(noticeTimerRef.current); } catch {} noticeTimerRef.current = null; }
+    };
+  }, [notice]);
 
   useEffect(() => {
     const p = proctorStatus || {};
@@ -1005,7 +1020,7 @@ function InterviewPractice() {
                       sessionId={sessionId}
                       intervalMs={3000}
                       onStatus={setProctorStatus}
-                      paused={false}
+                      paused={!isInterviewActive || finalizing}
                     />
 
                     <div style={{ marginTop: '1rem' }}>
@@ -1065,15 +1080,6 @@ function InterviewPractice() {
                         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                           {'matchScore' in proctorStatus && (
                             <span>Match: {proctorStatus.matchScore?.toFixed?.(2) ?? proctorStatus.matchScore}</span>
-                          )}
-                          {'multipleFaces' in proctorStatus && (
-                            <span>Multiple Faces: {String(proctorStatus.multipleFaces)}</span>
-                          )}
-                          {'lookingAway' in proctorStatus && (
-                            <span>Looking Away: {String(proctorStatus.lookingAway)}</span>
-                          )}
-                          {'facesCount' in proctorStatus && (
-                            <span>Faces: {String(proctorStatus.facesCount)}</span>
                           )}
                         </div>
                       </div>
